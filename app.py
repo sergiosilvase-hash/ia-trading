@@ -3,6 +3,12 @@ import streamlit as st
 from PIL import Image
 import google.generativeai as genai
 
+# Configuração segura via Secrets do Streamlit
+if "GEMINI_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+else:
+    st.error("Configure a chave GEMINI_API_KEY nos Secrets do Streamlit!")
+
 # Configuração da chave oficial ativa do Gemini
 # Configuração segura via Secrets do Streamlit
 if "GEMINI_API_KEY" in st.secrets:
@@ -69,7 +75,7 @@ if arquivo_imagem is not None:
             RESUMO: [Escreva um resumo didático, curto e condensado explicando os motivos técnicos dos 3 analistas]
             """
             
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-3.5-flash')
             response = model.generate_content([prompt_agentes, imagem])
             resultado = response.text
             
