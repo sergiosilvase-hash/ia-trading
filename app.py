@@ -4,8 +4,11 @@ from PIL import Image
 import google.generativeai as genai
 
 # Configuração da chave oficial ativa do Gemini
-CHAVE_GEMINI = "AQ.Ab8RN6KbT084eC7xHcVDtmNZM0eHYZTxmumZOO3Wr8m_gaXYpA"
-genai.configure(api_key=CHAVE_GEMINI)
+# Configuração segura via Secrets do Streamlit
+if "GEMINI_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+elif "GEMINI_API_KEY" in os.environ:
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 # CONFIGURAÇÃO DA INTERFACE RESPONSIVA DO SCANNER
 st.set_page_config(page_title="Scanner IA - Inteligência M5", layout="wide", initial_sidebar_state="collapsed")
