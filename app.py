@@ -41,32 +41,32 @@ if arquivo_upload:
                 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
                 base64_image = converter_imagem_base64(caminho_imagem)
 
-                # Chamada Agente 1 (Tendência)
+                # Chamada Agente 1 (Tendência) - CORRIGIDO ÍNDICE [0]
                 prompt_t1 = "Você é o Agente Analista Técnico. Descreva de 3 a 5 linhas a tendência dominante encontrada na sequência de candles M5 desta imagem."
                 response_t1 = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t1}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
                     temperature=0.1
                 )
-                res_tendencia = response_t1.choices.message.content
+                res_tendencia = response_t1.choices[0].message.content
 
-                # Chamada Agente 2 (Price Action)
+                # Chamada Agente 2 (Price Action) - CORRIGIDO ÍNDICE [0]
                 prompt_t2 = "Você é o Agente Especialista em Price Action. Identifique de 3 a 5 linhas as zonas de suporte, resistência e anatomia dos pavios visíveis na imagem."
                 response_t2 = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t2}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
                     temperature=0.1
                 )
-                res_price_action = response_t2.choices.message.content
+                res_price_action = response_t2.choices[0].message.content
 
-                # Chamada Agente 3 (Estrategista)
+                # Chamada Agente 3 (Estrategista) - CORRIGIDO ÍNDICE [0]
                 prompt_t3 = f"Com base nas análises de Tendência ({res_tendencia}) e Price Action ({res_price_action}), defina o veredito em formato de texto contendo as palavras exatas: SUGESTÃO: [COMPRA, VENDA ou NEUTRO], CONFLUÊNCIAS: [X/Y], CONFIANÇA: [BAIXA, MÉDIA ou ALTA]."
                 response_t3 = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t3}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
                     temperature=0.1
                 )
-                res_estrategista = response_t3.choices.message.content
+                res_estrategista = response_t3.choices[0].message.content
 
                 # Processamento das respostas
                 res_upper = res_estrategista.upper()
@@ -86,12 +86,11 @@ if arquivo_upload:
                 elif sugestao != "NEUTRO":
                     confluencias_count = "12/15"
 
-                # 📊 RENDERIZAÇÃO DA INTERFACE NATIVA (À prova de bloqueios do Streamlit)
+                # 📊 RENDERIZAÇÃO DA INTERFACE NATIVA
                 st.success("✅ Escaneamento Completo!")
                 
                 st.markdown("### 📊 HUD M5 - Painel de Confluências Combinadas")
                 
-                # Renderiza os indicadores principais em blocos destacados nativos
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
                     st.metric(label="Sugestão M5", value=sugestao)
@@ -100,7 +99,7 @@ if arquivo_upload:
                 with c3:
                     st.metric(label="Confiança das Análises", value=confianca)
                 with c4:
-                    if sugestao != "NEUTRO":
+                    if congestao_upper := sugestao.upper() != "NEUTRO":
                         hora_brasilia = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%H:%M")
                         st.metric(label="Horário de Entrada", value=hora_brasilia)
                     else:
