@@ -127,7 +127,7 @@ if arquivo_upload:
             
             t2 = Task(
                 description="Analise visualmente a imagem anexada. Liste as zonas de suporte, resistência e os padrões de velas mais marcantes observados.", 
-                expected_output="Resumo explicativo de price action de até 5 linhas.", 
+                expected_output="Resumo explicativo de price action de até 5 lines.", 
                 agent=especialista_price_action,
                 image_ports=[caminho_imagem]
             )
@@ -143,7 +143,8 @@ if arquivo_upload:
                 image_ports=[caminho_imagem]
             )
 
-            mesa = Crew(agents=[analista_tecnico, especialista_price_action, strategist_ob], tasks=[t1, t2, t3], process=Process.sequential)
+            # CORRIGIDO: Agora usando o nome correto 'estrategista_ob'
+            mesa = Crew(agents=[analista_tecnico, especialista_price_action, estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
             mesa.kickoff()
             
             # Capturando as respostas reais e factuais geradas por cada agente no processamento da imagem
@@ -165,7 +166,7 @@ if arquivo_upload:
             elif "BAIXA" in res_upper:
                 confianca = "BAIXA"
                 
-            # Lógica dinâmica para calcular a quantidade de confluências com base nas confirmações encontradas
+            # Lógica dinâmica para calcular a quantidade de confluências
             confluencias_count = "3/5"
             if "4/5" in res_upper: confluencias_count = "4/5"
             elif "5/5" in res_upper: confluencias_count = "5/5"
@@ -179,7 +180,7 @@ if arquivo_upload:
             cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
             cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
             
-            # 🧩 RENDERIZAÇÃO DO QUADRANTE HUD SOLICITADO COM RESUMO REAL DE CADA AGENTE (3 A 5 LINHAS)
+            # 🧩 RENDERIZAÇÃO DO QUADRANTE HUD SOLICITADO COM RESUMO REAL DE CADA AGENTE
             st.markdown(f"""
                 <div class="hud-container">
                     <div class="hud-header">
