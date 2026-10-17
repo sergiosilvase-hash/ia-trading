@@ -10,7 +10,7 @@ if "OPENAI_API_KEY" not in os.environ:
 
 st.set_page_config(page_title="Mesa de IA - Opções Binárias", layout="wide", initial_sidebar_state="collapsed")
 
-# Estilização CSS HUD Limpa e Avançada (Sem caixas internas indesejadas)
+# Estilização CSS HUD Isolada para evitar conflitos de sintaxe com o Python
 st.markdown("""
     <style>
     .hud-container {
@@ -103,7 +103,7 @@ if arquivo_upload:
             especialista_price_action = Agent(
                 role='Especialista em Price Action',
                 goal='Escanear todo o gráfico para mapear zonas estruturais de suporte/resistência e ler padrões vela por vela.',
-                backstory='Analista purista focado em decifrar a movimentação do mercado lendo a abertura, fechamento e rejeições nos pavios de todos os candles visíveis.',
+                backstory='Analista detalhista que foca em equilíbrio de forças e confluências visuais.',
                 verbose=True, llm=llm_openai
             )
 
@@ -132,7 +132,7 @@ if arquivo_upload:
             t3 = Task(
                 description=(
                     "Examine as análises anteriores de tendência e price action. "
-                    "Determine o veredito final contendo a SUGESTÃO (COMPRA, VENDA ou NEUTRO). "
+                    "Gere o veredito final contendo a SUGESTÃO (COMPRA, VENDA ou NEUTRO). "
                     "Recalcule dinamicamente o nível de confluência combinando as análises dos três agentes. "
                     "Determine quantas das análises e argumentos levantados confirmam a direção em uma escala combinada ampla (Exemplo: 11/15 ou 10/14 fatores). "
                     "Defina o nível de CONFIANÇA (BAIXA, MÉDIA ou ALTA) e dê seu veredito técnico."
@@ -145,7 +145,7 @@ if arquivo_upload:
             mesa = Crew(agents=[analista_tecnico, especialista_price_action, estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
             mesa.kickoff()
             
-            # Limpeza de texto cru para evitar quebras
+            # Limpeza de texto cru para evitar quebras de tags
             res_tendencia = str(t1.output.raw if t1.output else "").replace("<", "&lt;").replace(">", "&gt;")
             res_price_action = str(t2.output.raw if t2.output else "").replace("<", "&lt;").replace(">", "&gt;")
             res_estrategista = str(t3.output.raw if t3.output else "").replace("<", "&lt;").replace(">", "&gt;")
@@ -167,48 +167,40 @@ if arquivo_upload:
             if match:
                 confluencias_count = match.group(1)
             else:
-                confluencias_count = "12/15" if sugestao != "NEUTRO" else "3/15"
+                confluencias_count = "12/15" if congestao_upper := sugestao.upper() != "NEUTRO" else "3/15"
 
-            # Validação correta do Horário de Brasília sem erros de sintaxe
+            # Validação correta do Horário de Brasília sem misturar atribuição na string
             congestao_upper = sugestao.upper()
             if "NEUTRO" in congestao_upper:
                 linha_horario_html = ""
             else:
                 # Converte o fuso tirando as 3 horas de diferença da nuvem para bater com o Brasil
                 hora_brasilia = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%H:%M")
-                linha_horario_html = f'<div class="hud-linha">Hora de Entrada: <span style="color: #00E676;">{hora_brasilia}</span></div>'
+                linha_horario_html = f"<div class='hud-linha'>Hora de Entrada: <span style='color: #00E676;'>{hora_brasilia}</span></div>"
             
             st.success("✅ Escaneamento HUD Analítico Concluído!")
             
+            # Definição de cores dinâmicas baseadas nas variáveis de ambiente
             cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
             cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
             
-            # Renderização do HUD 100% Limpo com aspas fechadas corretamente
-            st.markdown(f"""
-                <div class="hud-container">
-                    <div class="hud-header">
-                        <span>📊 HUD M5 - Painel de Confluências Combinadas</span>
-                        <span>✕</span>
-                    </div>
-                    {linha_horario_html}
-                    <div class="hud-linha">Sugestão M5: <span style="color: {cor_sinal};">{sugestao}</span></div>
-                    <div class="hud-linha">Confluências Totais: <span style="color: #FFFFFF;">{confluencias_count}</span></div>
-                    <div class="hud-linha">Confiança: <span style="color: {cor_conf};">{confianca}</span></div>
-                    
-                    <div class="hud-secao-titulo">Interpretação e Resumos dos Agentes</div>
-                    
-                    <div class="agente-bloco">
-                        <div class="agente-nome">1) Agente Analista Técnico (Tendência Sequencial M5):</div>
-                        <p class="agente-texto">{res_tendencia}</p>
-                    </div>
-                    
-                    <div class="agente-bloco">
-                        <div class="agente-nome">2) Agente Price Action (Suportes e Anatomia das Velas):</div>
-                        <p class="agente-texto">{res_price_action}</p>
-                    </div>
-                    
-                    <div class="agente-bloco">
-                        <div class="agente-nome">3) Agente Estrategista (Veredito Combinado de Risco):</div>
-                        <p class="agente-texto">{res_estrategista}</p>
-                    </div>
-                </div>
+            # 🧩 FORMATO RIGOROSO DE CONSTRUÇÃO DO HTML (Prevenção total contra SyntaxError de aspas)
+            html_hud = "<div class='hud-container'>"
+            html_hud += "  <div class='hud-header'>"
+            html_hud += "    <span>📊 HUD M5 - Painel de Confluências Combinadas</span>"
+            html_hud += "    <span>✕</span>"
+            html_hud += "  </div>"
+            html_hud += "  " + linha_horario_html
+            html_hud += "  <div class='hud-linha'>Sugestão M5: <span style='color: " + cor_sinal + ";'>" + sugestao + "</span></div>"
+            html_hud += "  <div class='hud-linha'>Confluências Totais: <span style=" + "'color: #FFFFFF;'" + ">" + confluencias_count + "</span></div>"
+            html_hud += "  <div class='hud-linha'>Confiança: <span style='color: " + cor_conf + ";'>" + confianca + "</span></div>"
+            html_hud += "  <div class='hud-secao-titulo'>Interpretação e Resumos dos Agentes</div>"
+            html_hud += "  <div class='agente-bloco'>"
+            html_hud += "    <div class='agente-nome'>1) Agente Analista Técnico (Tendência Sequencial M5):</div>"
+            html_hud += "    <p class='agente-texto'>" + res_tendencia + "</p>"
+            html_hud += "  </div>"
+            html_hud += "  <div class='agente-bloco'>"
+            html_hud += "    <div class='agente-nome'>2) Agente Price Action (Suportes e Anatomia das Velas):</div>"
+            html_hud += "    <p class='agente-texto'>" + res_price_action + "</p>"
+            html_hud += "  </div>"
+            html_hud += "  <div class='agente-bloco'>"
