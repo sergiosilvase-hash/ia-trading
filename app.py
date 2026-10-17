@@ -1,9 +1,8 @@
 import streamlit as st
 import os
 import datetime
-import base64
-import re
 from PIL import Image
+import re
 from openai import OpenAI
 
 # Configuração segura para ler a chave da OpenAI direto dos Secrets do Streamlit
@@ -118,7 +117,7 @@ if arquivo_upload:
                 )
                 res_price_action = response_t2.choices[0].message.content
 
-                # REQUISITO EXIGIDO: Prompt modificado para aceitar confluências dinâmicas abertas, métrica cumulativa e confiança percentual (0-100%)
+                # Chamada Agente 3 (Estrategista)
                 prompt_t3 = (
                     f"Com base nas análises de Tendência ({res_tendencia}) e Price Action ({res_price_action}), forneça um veredito técnico. "
                     "Some o número TOTAL de argumentos e confluências técnicas encontradas em todo o gráfico. "
@@ -136,7 +135,7 @@ if arquivo_upload:
                 )
                 res_estrategista = response_t3.choices[0].message.content
 
-                # Processamento das strings e regras de gatilho
+                # Processamento das respostas
                 res_upper = res_estrategista.upper()
                 sugestao = "NEUTRO"
                 if "COMPRA" in res_upper or "CALL" in res_upper: sugestao = "COMPRA"
@@ -148,7 +147,7 @@ if arquivo_upload:
                 if match_conf:
                     confluencias_count = match_conf.group(1)
                 
-                # REQUISITO EXIGIDO: Forçar o sinal a virar NEUTRO caso as confluências combinadas fiquem abaixo de 3
+                # Forçar o sinal a virar NEUTRO caso as confluências combinadas fiquem abaixo de 3
                 if int(confluencias_count) < 3 and sugestao != "NEUTRO":
                     sugestao = "NEUTRO"
 
@@ -161,19 +160,18 @@ if arquivo_upload:
                     match_num = re.search(r"CONFIANÇA:\s*(\d+)", res_upper)
                     if match_num: confianca_pct = f"{match_num.group(1)}%"
 
-                # REQUISITO EXIGIDO: Cálculo de projeção do horário para a abertura da PRÓXIMA vela de M5
+                # Cálculo de projeção do horário para a abertura da PRÓXIMA vela de M5
                 if "NEUTRO" in sugestao.upper():
                     linha_horario_html = ""
                 else:
                     agora = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
-                    # Arredonda os minutos para o próximo bloco múltiplo de 5 (Fechamento do candle atual / Abertura do próximo)
                     minutos_atuais = agora.minute
-                    minutos_proxima_vela = c_min = ((minutos_atuais // 5) + 1) * 5
-                    
+                    minutos_proxima_vela = ((minutos_atuais // 5) + 1) * 5
                     proxima_vela_time = agora.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(minutes=minutos_proxima_vela)
                     hora_entrada = proxima_vela_time.strftime("%H:%M")
                     linha_horario_html = f"<div class='hud-linha'>Hora da Próxima Entrada (M5 Target): <span style='color: #00E676;'>{hora_entrada}</span></div>"
 
+                # 📊 RENDERIZAÇÃO DA INTERFACE NATIVA
                 st.success("✅ Escaneamento Completo!")
                 st.markdown("### 📊 HUD M5 - Painel de Confluências Combinadas")
                 
@@ -208,3 +206,9 @@ if arquivo_upload:
                     label="📥 Fazer Download dos Dados do HUD (.txt)",
                     data=relatorio_txt,
                     file_name="hud_m5_combinado.txt",
+                    mime="text/plain"
+                )
+
+            except Exception as e:
+                st.error("Ocorreu um erro na execução dos agentes da OpenAI.")
+                st.exception(e)
