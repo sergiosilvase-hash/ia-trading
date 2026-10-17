@@ -143,7 +143,6 @@ if arquivo_upload:
                     image_ports=[caminho_imagem]
                 )
 
-                # CORRIGIDO: Removida a atribuição acidental de sintaxe inválida
                 mesa = Crew(agents=[analista_tecnico, especialista_price_action, estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
                 resultado_mesa = mesa.kickoff()
                 
@@ -169,22 +168,27 @@ if arquivo_upload:
                 if match:
                     confluencias_count = match.group(1)
                 else:
-                    confluencias_count = "12/15" if sugestao != "NEUTRO" else "3/15"
+                    if sugestao != "NEUTRO":
+                        confluencias_count = "12/15"
+                    else:
+                        confluencias_count = "3/15"
 
-                # Validação correta do Horário de Brasília
+                # Validação do Horário de Brasília
                 congestao_upper = sugestao.upper()
                 if "NEUTRO" in congestao_upper:
                     linha_horario_html = ""
                 else:
+                    # Converte o fuso tirando as 3 horas de diferença da nuvem para bater com o Brasil
                     hora_brasilia = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%H:%M")
                     linha_horario_html = f"<div class='hud-linha'>Hora de Entrada: <span style='color: #00E676;'>{hora_brasilia}</span></div>"
                 
                 st.success("✅ Escaneamento HUD Analítico Concluído!")
                 
+                # Definição de cores dinâmicas
                 cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
                 cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
                 
-                # Montagem estruturada do HTML
+                # Construção limpa e segura do código visual HTML (Agora dentro do escopo correto do try)
                 html_hud = "<div class='hud-container'>"
                 html_hud += "  <div class='hud-header'>"
                 html_hud += "    <span>📊 HUD M5 - Painel de Confluências Combinadas</span>"
@@ -195,5 +199,3 @@ if arquivo_upload:
                 html_hud += "  <div class='hud-linha'>Confluências Totais: <span style=" + "'color: #FFFFFF;'" + ">" + confluencias_count + "</span></div>"
                 html_hud += "  <div class='hud-linha'>Confiança: <span style='color: " + cor_conf + ";'>" + confianca + "</span></div>"
                 html_hud += "  <div class='hud-secao-titulo'>Interpretação e Resumos dos Agentes</div>"
-                html_hud += "  <div class='agente-bloco'>"
-                html_hud += "    <div class='agente-nome'>1) Agente Analista Técnico (Tendência Sequencial M5):</div>"
