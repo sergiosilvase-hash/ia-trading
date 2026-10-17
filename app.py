@@ -1,7 +1,6 @@
 import streamlit as st
 import os
-from datetime import datetime
-import timedelta
+import datetime
 from PIL import Image
 from crewai import Agent, Task, Crew, Process, LLM
 
@@ -11,7 +10,7 @@ if "OPENAI_API_KEY" not in os.environ:
 
 st.set_page_config(page_title="Mesa de IA - Opções Binárias", layout="wide", initial_sidebar_state="collapsed")
 
-# Estilização CSS HUD Limpa e Avançada (Removido caixas internas indesejadas)
+# Estilização CSS HUD Limpa e Avançada (Sem caixas internas indesejadas)
 st.markdown("""
     <style>
     .hud-container {
@@ -115,7 +114,7 @@ if arquivo_upload:
                 verbose=True, llm=llm_openai
             )
 
-            # INSTRUÇÃO ADICIONADA: Forçando o processamento de todos os candles do gráfico de 5 minutos
+            # Forçando o processamento de todos os candles do gráfico de 5 minutos
             t1 = Task(
                 description="Analise visualmente a imagem anexada candle por candle. Avalie toda a sequência temporal dos gráficos de 5 minutos expostos e descreva a tendência micro e macro fundamentando nos movimentos visíveis.", 
                 expected_output="Resumo da leitura sequencial de tendência.", 
@@ -134,7 +133,8 @@ if arquivo_upload:
                 description=(
                     "Examine os relatórios sequenciais anteriores. "
                     "Determine o veredito final contendo a SUGESTÃO (COMPRA, VENDA ou NEUTRO). "
-                    "Some a quantidade total de argumentos e indicadores extraídos de todos os candles pelos agentes e monte o indicador dinâmico combinando as análises (Exemplo: 12/15 ou 10/14 fatores). "
+                    "Recalcule dinamicamente o nível de confluência combinando as análises dos três agentes. "
+                    "Determine quantas das análises e argumentos levantados confirmam a direção em uma escala combinada ampla (Exemplo: 12/15 ou 10/14 fatores). "
                     "Defina o nível de CONFIANÇA (BAIXA, MÉDIA ou ALTA) e dê seu veredito técnico."
                 ), 
                 expected_output="Síntese da estratégia contendo obrigatoriamente as palavras-chave: SUGESTÃO, CONFLUÊNCIAS e CONFIANÇA.", 
@@ -145,7 +145,7 @@ if arquivo_upload:
             mesa = Crew(agents=[analista_tecnico, especialista_price_action, estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
             mesa.kickoff()
             
-            # Limpeza de texto cru para evitar que caracteres ou blocos HTML quebrem a estrutura visual
+            # Limpeza de texto cru para evitar quebras
             res_tendencia = str(t1.output.raw if t1.output else "").replace("<", "&lt;").replace(">", "&gt;")
             res_price_action = str(t2.output.raw if t2.output else "").replace("<", "&lt;").replace(">", "&gt;")
             res_estrategista = str(t3.output.raw if t3.output else "").replace("<", "&lt;").replace(">", "&gt;")
@@ -167,14 +167,14 @@ if arquivo_upload:
             if match:
                 confluencias_count = match.group(1)
             else:
-                confluencias_count = "12/15" if sugestao != "NEUTRO" else "2/15"
+                confluencias_count = "12/15" if sugestao != "NEUTRO" else "3/15"
 
-            # 🛠️ CORREÇÃO EXIGIDA: Correção do fuso horário UTC para o Horário de Brasília (-3 horas no servidor)
-            if "NEUTRO" in congestao_upper := sugestao.upper():
+            # 🛠️ CORREÇÃO DA LINHA DO ERRO: Separação correta da atribuição e validação do Horário de Brasília
+            congestao_upper = sugestao.upper()
+            if "NEUTRO" in congestao_upper:
                 linha_horario_html = ""
             else:
-                import datetime
-                # Converte o horário atual da máquina tirando 3 horas para ajustar o fuso do Brasil
+                # Converte o fuso tirando as 3 horas de diferença da nuvem para bater com o Brasil
                 hora_brasilia = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%H:%M")
                 linha_horario_html = f'<div class="hud-linha">Hora de Entrada: <span style="color: #00E676;">{hora_brasilia}</span></div>'
             
@@ -183,7 +183,7 @@ if arquivo_upload:
             cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
             cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
             
-            # 🧩 RENDERIZAÇÃO DO HUD TOTALMENTE LIMPO (Sem caixas cinzas no meio do painel)
+            # Renderização do HUD 100% Limpo
             st.markdown(f"""
                 <div class="hud-container">
                     <div class="hud-header">
@@ -209,3 +209,6 @@ if arquivo_upload:
                     
                     <div class="agente-bloco">
                         <div class="agente-nome">3) Agente Estrategista (Veredito Combinado de Risco):</div>
+                        <p class="agente-texto">{res_estrategista}</p>
+                    </div>
+                </div>
