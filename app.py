@@ -143,7 +143,8 @@ if arquivo_upload:
                     image_ports=[caminho_imagem]
                 )
 
-                mesa = Crew(agents=[analista_tecnico, especialista_price_action, Campinas_ob = estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
+                # CORRIGIDO: Removida a atribuição acidental de sintaxe inválida
+                mesa = Crew(agents=[analista_tecnico, especialista_price_action, estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
                 resultado_mesa = mesa.kickoff()
                 
                 # Extração segura e forçada convertendo os objetos para strings de texto puro
@@ -196,4 +197,3 @@ if arquivo_upload:
                 html_hud += "  <div class='hud-secao-titulo'>Interpretação e Resumos dos Agentes</div>"
                 html_hud += "  <div class='agente-bloco'>"
                 html_hud += "    <div class='agente-nome'>1) Agente Analista Técnico (Tendência Sequencial M5):</div>"
-                html_hud += "    <p class='agente-texto'>" + res_tendencia + "</p>"
