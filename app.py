@@ -131,10 +131,10 @@ if arquivo_upload:
             
             t3 = Task(
                 description=(
-                    "Examine os relatórios sequenciais anteriores. "
+                    "Examine as análises anteriores de tendência e price action. "
                     "Determine o veredito final contendo a SUGESTÃO (COMPRA, VENDA ou NEUTRO). "
                     "Recalcule dinamicamente o nível de confluência combinando as análises dos três agentes. "
-                    "Determine quantas das análises e argumentos levantados confirmam a direção em uma escala combinada ampla (Exemplo: 12/15 ou 10/14 fatores). "
+                    "Determine quantas das análises e argumentos levantados confirmam a direção em uma escala combinada ampla (Exemplo: 11/15 ou 10/14 fatores). "
                     "Defina o nível de CONFIANÇA (BAIXA, MÉDIA ou ALTA) e dê seu veredito técnico."
                 ), 
                 expected_output="Síntese da estratégia contendo obrigatoriamente as palavras-chave: SUGESTÃO, CONFLUÊNCIAS e CONFIANÇA.", 
@@ -169,7 +169,7 @@ if arquivo_upload:
             else:
                 confluencias_count = "12/15" if sugestao != "NEUTRO" else "3/15"
 
-            # 🛠️ CORREÇÃO DA LINHA DO ERRO: Separação correta da atribuição e validação do Horário de Brasília
+            # Validação correta do Horário de Brasília sem erros de sintaxe
             congestao_upper = sugestao.upper()
             if "NEUTRO" in congestao_upper:
                 linha_horario_html = ""
@@ -183,7 +183,7 @@ if arquivo_upload:
             cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
             cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
             
-            # Renderização do HUD 100% Limpo
+            # Renderização do HUD 100% Limpo com aspas fechadas corretamente
             st.markdown(f"""
                 <div class="hud-container">
                     <div class="hud-header">
