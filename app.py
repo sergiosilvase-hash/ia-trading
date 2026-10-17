@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import datetime
 import base64
+import re
 from PIL import Image
 from openai import OpenAI
 
@@ -10,6 +11,64 @@ if "OPENAI_API_KEY" not in os.environ:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 st.set_page_config(page_title="Mesa de IA - Opções Binárias", layout="wide", initial_sidebar_state="collapsed")
+
+# Estilização CSS HUD Limpa e Avançada
+st.markdown("""
+    <style>
+    .hud-container {
+        background-color: #121212;
+        padding: 30px;
+        border-radius: 12px;
+        border: 1px solid #1E1E1E;
+        color: #FFFFFF;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        max-width: 650px;
+        margin: 0 auto;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
+    }
+    .hud-header {
+        font-size: 18px;
+        font-weight: bold;
+        color: #00E676;
+        border-bottom: 2px solid #1E1E1E;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+    }
+    .hud-linha {
+        font-size: 15px;
+        margin-bottom: 12px;
+        font-weight: bold;
+    }
+    .hud-secao-titulo {
+        font-size: 14px;
+        font-weight: bold;
+        color: #00E676;
+        margin-top: 25px;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #1E1E1E;
+        padding-bottom: 5px;
+    }
+    .agente-bloco {
+        margin-bottom: 18px;
+    }
+    .agente-nome {
+        color: #00B0FF;
+        font-weight: bold;
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+    .agente-texto {
+        color: #E0E0E0;
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 0;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("🤖 Painel OpenAI: Visão & Análise M5")
 st.markdown("---")
@@ -41,8 +100,8 @@ if arquivo_upload:
                 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
                 base64_image = converter_imagem_base64(caminho_imagem)
 
-                # Chamada Agente 1 (Tendência) - CORRIGIDO ÍNDICE [0]
-                prompt_t1 = "Você é o Agente Analista Técnico. Descreva de 3 a 5 linhas a tendência dominante encontrada na sequência de candles M5 desta imagem."
+                # Chamada Agente 1 (Tendência)
+                prompt_t1 = "Você é o Agente Analista Técnico. Enumere e descreva de 3 a 5 linhas os fatores de tendência macro/micro encontrados na sequência de candles M5."
                 response_t1 = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t1}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
@@ -50,8 +109,8 @@ if arquivo_upload:
                 )
                 res_tendencia = response_t1.choices[0].message.content
 
-                # Chamada Agente 2 (Price Action) - CORRIGIDO ÍNDICE [0]
-                prompt_t2 = "Você é o Agente Especialista em Price Action. Identifique de 3 a 5 linhas as zonas de suporte, resistência e anatomia dos pavios visíveis na imagem."
+                # Chamada Agente 2 (Price Action)
+                prompt_t2 = "Você é o Agente Especialista em Price Action. Enumere e liste de 3 a 5 linhas as zonas de suporte, resistência e padrões anatômicos de rejeição nos pavios."
                 response_t2 = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t2}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
@@ -59,8 +118,17 @@ if arquivo_upload:
                 )
                 res_price_action = response_t2.choices[0].message.content
 
-                # Chamada Agente 3 (Estrategista) - CORRIGIDO ÍNDICE [0]
-                prompt_t3 = f"Com base nas análises de Tendência ({res_tendencia}) e Price Action ({res_price_action}), defina o veredito em formato de texto contendo as palavras exatas: SUGESTÃO: [COMPRA, VENDA ou NEUTRO], CONFLUÊNCIAS: [X/Y], CONFIANÇA: [BAIXA, MÉDIA ou ALTA]."
+                # REQUISITO EXIGIDO: Prompt modificado para aceitar confluências dinâmicas abertas, métrica cumulativa e confiança percentual (0-100%)
+                prompt_t3 = (
+                    f"Com base nas análises de Tendência ({res_tendencia}) e Price Action ({res_price_action}), forneça um veredito técnico. "
+                    "Some o número TOTAL de argumentos e confluências técnicas encontradas em todo o gráfico. "
+                    "Se o número total de confluências ativas a favor do mesmo movimento for menor do que 3, a sugestão DEVE ser obrigatoriamente NEUTRO. "
+                    "Gere a resposta contendo exatamente as chaves textuais:\n"
+                    "SUGESTÃO: [COMPRA, VENDA ou NEUTRO]\n"
+                    "CONFLUÊNCIAS: [Número total de confluências identificadas que apoiam o movimento]\n"
+                    "CONFIANÇA: [Valor estimado de 0% a 100% de probabilidade estatística da análise]\n"
+                    "Justifique sua escolha em até 4 linhas."
+                )
                 response_t3 = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t3}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
@@ -68,44 +136,60 @@ if arquivo_upload:
                 )
                 res_estrategista = response_t3.choices[0].message.content
 
-                # Processamento das respostas
+                # Processamento das strings e regras de gatilho
                 res_upper = res_estrategista.upper()
                 sugestao = "NEUTRO"
                 if "COMPRA" in res_upper or "CALL" in res_upper: sugestao = "COMPRA"
                 elif "VENDA" in res_upper or "PUT" in res_upper: sugestao = "VENDA"
                 
-                confianca = "BAIXA"
-                if "ALTA" in res_upper: confianca = "ALTA"
-                elif "MÉDIA" in res_upper or "MEDIA" in res_upper: confianca = "MÉDIA"
+                # Captura dinâmica do número total de confluências cumulativas abertas
+                confluencias_count = "0"
+                match_conf = re.search(r"CONFLUÊNCIAS:\s*(\d+)", res_upper)
+                if match_conf:
+                    confluencias_count = match_conf.group(1)
                 
-                confluencias_count = "3/15"
-                import re
-                match = re.search(r"CONFLUÊNCIAS:\s*(\d+/\d+)", res_upper)
-                if match:
-                    confluencias_count = match.group(1)
-                elif sugestao != "NEUTRO":
-                    confluencias_count = "12/15"
+                # REQUISITO EXIGIDO: Forçar o sinal a virar NEUTRO caso as confluências combinadas fiquem abaixo de 3
+                if int(confluencias_count) < 3 and sugestao != "NEUTRO":
+                    sugestao = "NEUTRO"
 
-                # 📊 RENDERIZAÇÃO DA INTERFACE NATIVA
+                # Captura dinâmica da métrica de confiança de 0 a 100%
+                confianca_pct = "0%"
+                match_pct = re.search(r"CONFIANÇA:\s*(\d+%)", res_upper)
+                if match_pct:
+                    confianca_pct = match_pct.group(1)
+                else:
+                    match_num = re.search(r"CONFIANÇA:\s*(\d+)", res_upper)
+                    if match_num: confianca_pct = f"{match_num.group(1)}%"
+
+                # REQUISITO EXIGIDO: Cálculo de projeção do horário para a abertura da PRÓXIMA vela de M5
+                if "NEUTRO" in sugestao.upper():
+                    linha_horario_html = ""
+                else:
+                    agora = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+                    # Arredonda os minutos para o próximo bloco múltiplo de 5 (Fechamento do candle atual / Abertura do próximo)
+                    minutos_atuais = agora.minute
+                    minutos_proxima_vela = c_min = ((minutos_atuais // 5) + 1) * 5
+                    
+                    proxima_vela_time = agora.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(minutes=minutos_proxima_vela)
+                    hora_entrada = proxima_vela_time.strftime("%H:%M")
+                    linha_horario_html = f"<div class='hud-linha'>Hora da Próxima Entrada (M5 Target): <span style='color: #00E676;'>{hora_entrada}</span></div>"
+
                 st.success("✅ Escaneamento Completo!")
-                
                 st.markdown("### 📊 HUD M5 - Painel de Confluências Combinadas")
                 
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
                     st.metric(label="Sugestão M5", value=sugestao)
                 with c2:
-                    st.metric(label="Confluências Totais", value=confluencias_count)
+                    st.metric(label="Confluências Ativas (Min: 3)", value=confluencias_count)
                 with c3:
-                    st.metric(label="Confiança das Análises", value=confianca)
+                    st.metric(label="Nível de Confiança", value=confianca_pct)
                 with c4:
-                    if congestao_upper := sugestao.upper() != "NEUTRO":
-                        hora_brasilia = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%H:%M")
-                        st.metric(label="Horário de Entrada", value=hora_brasilia)
+                    if "NEUTRO" not in sugestao.upper():
+                        st.metric(label="Próxima Entrada (Abertura)", value=hora_entrada)
                     else:
-                        st.metric(label="Horário de Entrada", value="FORA DE MERCADO")
+                        st.metric(label="Próxima Entrada", value="AGUARDANDO GATILHO")
 
-                # Exibe as caixas de texto estruturadas com os resumos de cada um dos agentes
                 st.markdown("---")
                 st.markdown("#### 🧠 Interpretação e Resumos dos Agentes")
                 
@@ -118,16 +202,9 @@ if arquivo_upload:
                 with st.expander("3) Agente Estrategista (Veredito Combinado de Risco)", expanded=True):
                     st.write(res_estrategista)
 
-                # Relatório consolidado para download (.txt)
                 st.markdown("---")
-                relatorio_txt = f"HUD M5 - RELATÓRIO\nSugestão: {sugestao}\nConfluências: {confluencias_count}\nConfiança: {confianca}\n\n1) TENDÊNCIA:\n{res_tendencia}\n\n2) PRICE ACTION:\n{res_price_action}\n\n3) ESTRATEGISTA:\n{res_estrategista}"
+                relatorio_txt = f"HUD M5 - RELATÓRIO\nSugestão: {sugestao}\nConfluências: {confluencias_count}\nConfiança: {confianca_pct}\n\n1) TENDÊNCIA:\n{res_tendencia}\n\n2) PRICE ACTION:\n{res_price_action}\n\n3) ESTRATEGISTA:\n{res_estrategista}"
                 st.download_button(
                     label="📥 Fazer Download dos Dados do HUD (.txt)",
                     data=relatorio_txt,
                     file_name="hud_m5_combinado.txt",
-                    mime="text/plain"
-                )
-
-            except Exception as e:
-                st.error("Ocorreu um erro na execução dos agentes da OpenAI.")
-                st.exception(e)
