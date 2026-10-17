@@ -10,7 +10,7 @@ if "OPENAI_API_KEY" not in os.environ:
 
 st.set_page_config(page_title="Mesa de IA - Opções Binárias", layout="wide", initial_sidebar_state="collapsed")
 
-# Estilização CSS HUD Isolada para evitar conflitos de sintaxe com o Python
+# Estilização CSS HUD Limpa e Avançada (Sem caixas internas indesejadas)
 st.markdown("""
     <style>
     .hud-container {
@@ -161,15 +161,19 @@ if arquivo_upload:
             if "ALTA" in res_upper: confianca = "ALTA"
             elif "BAIXA" in res_upper: confianca = "BAIXA"
             
+            # CORREÇÃO DA LINHA DO ERRO: Lógica separada de forma limpa e sem operadores misturados
             confluencias_count = "Calculando..."
             import re
             match = re.search(r"CONFLUÊNCIAS:\s*(\d+/\d+)", res_upper)
             if match:
                 confluencias_count = match.group(1)
             else:
-                confluencias_count = "12/15" if congestao_upper := sugestao.upper() != "NEUTRO" else "3/15"
+                if sugestao != "NEUTRO":
+                    confluencias_count = "12/15"
+                else:
+                    confluencias_count = "3/15"
 
-            # Validação correta do Horário de Brasília sem misturar atribuição na string
+            # Validação do Horário de Brasília
             congestao_upper = sugestao.upper()
             if "NEUTRO" in congestao_upper:
                 linha_horario_html = ""
@@ -180,11 +184,11 @@ if arquivo_upload:
             
             st.success("✅ Escaneamento HUD Analítico Concluído!")
             
-            # Definição de cores dinâmicas baseadas nas variáveis de ambiente
+            # Definição de cores dinâmicas
             cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
             cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
             
-            # 🧩 FORMATO RIGOROSO DE CONSTRUÇÃO DO HTML (Prevenção total contra SyntaxError de aspas)
+            # Construção limpa e segura do código visual HTML
             html_hud = "<div class='hud-container'>"
             html_hud += "  <div class='hud-header'>"
             html_hud += "    <span>📊 HUD M5 - Painel de Confluências Combinadas</span>"
