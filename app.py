@@ -2,8 +2,8 @@ import streamlit as st
 import os
 import datetime
 import base64
-from PIL import Image
 import re
+from PIL import Image
 from openai import OpenAI
 
 # Configuração segura para ler a chave da OpenAI direto dos Secrets do Streamlit
@@ -100,8 +100,12 @@ if arquivo_upload:
                 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
                 base64_image = converter_imagem_base64(caminho_imagem)
 
-                # Chamada Agente 1 (Tendência) - ADICIONADO ÍNDICE [0]
-                prompt_t1 = "Você é o Agente Analista Técnico. Enumere e descreva de 3 a 5 linhas os fatores de tendência macro/micro encontrados na sequência de candles M5."
+                # Chamada Agente 1 (Tendência) - Foco Afirmativo
+                prompt_t1 = (
+                    "Você é o Agente Analista Técnico. Faça a leitura do gráfico. "
+                    "Determine de forma direta a estrutura atual. Não use verbos de comando como 'procure' ou 'identifique'. "
+                    "Escreva o resultado da sua própria análise em até 4 linhas afirmando o que você detectou na tendência macro e micro."
+                )
                 response_t1 = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t1}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
@@ -109,8 +113,12 @@ if arquivo_upload:
                 )
                 res_tendencia = response_t1.choices[0].message.content
 
-                # Chamada Agente 2 (Price Action) - ADICIONADO ÍNDICE [0]
-                prompt_t2 = "Você é o Agente Especialista em Price Action. Enumere e liste de 3 a 5 linhas as zonas de suporte, resistência e padrões anatômicos de prevenção ou rejeição nos pavios."
+                # Chamada Agente 2 (Price Action) - Foco em Execução Direta
+                prompt_t2 = (
+                    "Você é o Agente Especialista em Price Action. Analise a anatomia de todos os candles. "
+                    "Apresente de forma direta os pontos de suporte, resistência e padrões de pavios que VOCÊ localizou na imagem. "
+                    "Proibido usar palavras como 'procure', 'observe' ou 'identifique'. Fale as regiões exatas encontradas em até 5 linhas."
+                )
                 response_t2 = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t2}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
@@ -118,16 +126,15 @@ if arquivo_upload:
                 )
                 res_price_action = response_t2.choices[0].message.content
 
-                # Chamada Agente 3 (Estrategista) - ADICIONADO ÍNDICE [0]
+                # Chamada Agente 3 (Estrategista) - Direto ao Ponto com Motivo Claro
                 prompt_t3 = (
-                    f"Com base nas análises de Tendência ({res_tendencia}) e Price Action ({res_price_action}), forneça um veredito técnico. "
-                    "Some o número TOTAL de argumentos e confluências técnicas encontradas em todo o gráfico. "
-                    "Se o número total de confluências ativas a favor do mesmo movimento for menor do que 3, a sugestão DEVE ser obrigatoriamente NEUTRO. "
+                    f"Com base nas análises de Tendência ({res_tendencia}) e Price Action ({res_price_action}), forneça um veredito técnico final. "
+                    "Seja extremamente direto e objetivo. Não enrole. "
                     "Gere a resposta contendo exatamente as chaves textuais:\n"
                     "SUGESTÃO: [COMPRA, VENDA ou NEUTRO]\n"
-                    "CONFLUÊNCIAS: [Número total de confluências identificadas que apoiam o movimento]\n"
-                    "CONFIANÇA: [Valor estimado de 0% a 100% de probabilidade estatística da análise]\n"
-                    "Justifique sua escolha em até 4 linhas."
+                    "CONFLUÊNCIAS: [Número total de fatores técnicos encontrados]\n"
+                    "CONFIANÇA: [Valor estimado de 0% a 100%]\n"
+                    "MOTIVO TÉCNICO: [Se o sinal for COMPRA ou VENDA, explique o gatilho exato em 2 linhas. Se for NEUTRO, diga o motivo exato de ficar de fora em 2 linhas]."
                 )
                 response_t3 = client.chat.completions.create(
                     model="gpt-4o",
@@ -142,17 +149,14 @@ if arquivo_upload:
                 if "COMPRA" in res_upper or "CALL" in res_upper: sugestao = "COMPRA"
                 elif "VENDA" in res_upper or "PUT" in res_upper: sugestao = "VENDA"
                 
-                # Captura dinâmica do número total de confluências cumulativas abertas
                 confluencias_count = "0"
                 match_conf = re.search(r"CONFLUÊNCIAS:\s*(\d+)", res_upper)
                 if match_conf:
                     confluencias_count = match_conf.group(1)
                 
-                # Forçar o sinal a virar NEUTRO caso as confluências combinadas fiquem abaixo de 3
                 if int(confluencias_count) < 3 and sugestao != "NEUTRO":
                     sugestao = "NEUTRO"
 
-                # Captura dinâmica da métrica de confiança de 0 a 100%
                 confianca_pct = "0%"
                 match_pct = re.search(r"CONFIANÇA:\s*(\d+%)", res_upper)
                 if match_pct:
@@ -161,7 +165,7 @@ if arquivo_upload:
                     match_num = re.search(r"CONFIANÇA:\s*(\d+)", res_upper)
                     if match_num: confianca_pct = f"{match_num.group(1)}%"
 
-                # Cálculo de projeção do horário para a abertura da PRÓXIMA vela de M5
+                # Horário arredondado da próxima vela M5
                 if "NEUTRO" in sugestao.upper():
                     linha_horario_html = ""
                 else:
@@ -172,7 +176,6 @@ if arquivo_upload:
                     hora_entrada = proxima_vela_time.strftime("%H:%M")
                     linha_horario_html = f"<div class='hud-linha'>Hora da Próxima Entrada (M5 Target): <span style='color: #00E676;'>{hora_entrada}</span></div>"
 
-                # 📊 RENDERIZAÇÃO DA INTERFACE NATIVA
                 st.success("✅ Escaneamento Completo!")
                 st.markdown("### 📊 HUD M5 - Painel de Confluências Combinadas")
                 
