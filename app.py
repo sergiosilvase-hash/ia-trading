@@ -85,74 +85,59 @@ if arquivo_upload:
     if st.button("🚀 Iniciar Escaneamento e Análise dos Agentes"):
         with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."):
             
-            # BLOCO DE DIAGNÓSTICO: Garante que a chave existe antes de iniciar
-            if not os.environ.get("OPENAI_API_KEY"):
-                st.error("❌ ERRO: A chave 'OPENAI_API_KEY' não foi encontrada nos Secrets do Streamlit.")
-                st.stop()
-            
-            # Inicialização do Modelo Multimodal
+            # Inicialização estável do modelo GPT-4o
             llm_openai = LLM(
                 model="openai/gpt-4o", 
                 temperature=0.1,
                 api_key=os.environ["OPENAI_API_KEY"]
             )
 
-            # Criando os 3 Agentes Especialistas com foco total na sequência de velas M5
+            # Criando os 3 Agentes Especialistas
             analista_tecnico = Agent(
                 role='Analista Técnico Quantitativo',
-                goal='Mapear rigorosamente a tendência lendo todos os candles M5 visíveis na imagem sequencialmente.',
-                backstory='Especialista em visão computacional que analisa o histórico inteiro de velas expostas na tela para extrair a tendência macro e micro real.',
+                goal='Mapear a tendência lendo todos os candles M5 visíveis na imagem sequencialmente.',
+                backstory='Especialista em analisar o histórico inteiro de velas expostas na tela para extrair a tendência macro e micro.',
                 verbose=True, llm=llm_openai
             )
 
             especialista_price_action = Agent(
                 role='Especialista em Price Action',
-                goal='Escanear todo o gráfico para mapear zonas estruturais de suporte/resistência e ler padrões vela por vela.',
-                backstory='Analista detalhista que foca em equilíbrio de forças e confluências visuais.',
+                goal='Escanear o gráfico para mapear zonas de suporte/resistência e ler padrões vela por vela.',
+                backstory='Analista focado em decifrar a movimentação do mercado lendo pavios e corpos de velas.',
                 verbose=True, llm=llm_openai
             )
 
             estrategista_ob = Agent(
                 role='Estrategista de Opções Binárias',
-                goal='Tomar a decisão final somando todas as confluências coletadas no cenário completo do gráfico.',
-                backstory='Matemático financeiro que cruza o histórico analítico de velas para validar operações acima de 75% de probabilidade.',
+                goal='Tomar a decisão final combinando as confluências coletadas no cenário do gráfico.',
+                backstory='Matemático financeiro que valida operações buscando alta probabilidade de acerto.',
                 verbose=True, llm=llm_openai
             )
 
-            # Forçando o processamento de todos os candles do gráfico de 5 minutos
+            # CORREÇÃO CRUCIAL: Injetando o arquivo de imagem diretamente nas tarefas de visão do GPT-4o
             t1 = Task(
-                description="Analise visualmente a imagem anexada candle por candle. Avalie toda a sequência temporal dos gráficos de 5 minutos expostos e descreva a tendência micro e macro fundamentando nos movimentos visíveis.", 
+                description=f"Analise o arquivo de imagem salvo em {caminho_imagem} candle por candle. Avalie toda a sequência temporal dos gráficos de 5 minutos expostos e descreva a tendência micro e macro.", 
                 expected_output="Resumo explicativo sobre a tendência de alta, baixa ou lateralidade encontrada nos candles de até 5 linhas.", 
-                agent=analista_tecnico,
-                image_ports=[caminho_imagem]
+                agent=analista_tecnico
             )
             
             t2 = Task(
-                description="Analise visualmente a imagem anexada. Leia a estrutura de pavios e corpo de todos os candles para delimitar os suportes/resistências e listar padrões gráficos reais identificados.", 
+                description=f"Analise o arquivo de imagem salvo em {caminho_imagem}. Leia a estrutura de pavios e corpo de todos os candles para delimitar os suportes/resistências e listar padrões gráficos reais identificados.", 
                 expected_output="Resumo estrutural indicando padrões de velas e zonas de reversão/pullback de até 5 linhas.", 
-                agent=especialista_price_action,
-                image_ports=[caminho_imagem]
+                agent=especialista_price_action
             )
             
             t3 = Task(
-                description=(
-                    "Examine as análises anteriores de tendência e price action. "
-                    "Gere o veredito final contendo a SUGESTÃO (COMPRA, VENDA ou NEUTRO). "
-                    "Recalcule dinamicamente o nível de confluência combinando as análises dos três agentes. "
-                    "Determine quantas das análises confirmam a direção em uma escala combinada ampla (Obrigatoriamente no formato: CONFLUÊNCIAS: X/Y, por exemplo 11/15 ou 10/14). "
-                    "Defina o nível de CONFIANÇA (BAIXA, MÉDIA ou ALTA). "
-                    "Gere um resumo estratégico final justificando sua escolha de até 5 linhas."
-                ), 
+                description=f"Examine os relatórios anteriores gerados sobre a imagem {caminho_imagem}. Gere o veredito final contendo de forma explícita as palavras-chave: SUGESTÃO (COMPRA, VENDA ou NEUTRO), CONFLUÊNCIAS (quantidade no formato X/Y) e CONFIANÇA (BAIXA, MÉDIA ou ALTA), seguido de uma justificativa de até 5 linhas.", 
                 expected_output="Síntese da estratégia contendo obrigatoriamente as palavras-chave: SUGESTÃO, CONFLUÊNCIAS e CONFIANÇA.", 
-                agent=estrategista_ob,
-                image_ports=[caminho_imagem]
+                agent=estrategista_ob
             )
 
-            # CORRIGIDO: Nomes das variáveis perfeitamente alinhados e sem blocos try quebrando as margens
-            mesa = Crew(agents=[analista_tecnico, especialista_price_action, Wood_ob := estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
+            # Executando a mesa de agentes
+            mesa = Crew(agents=[analista_tecnico, especialista_price_action, estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
             resultado_mesa = mesa.kickoff()
             
-            # Extração segura e forçada convertendo os objetos para strings de texto puro
+            # Convertendo os retornos em texto limpo
             res_tendencia = str(t1.output.raw if t1.output else "Análise de tendência processada.").replace("<", "&lt;").replace(">", "&gt;")
             res_price_action = str(t2.output.raw if t2.output else "Zonas estruturais mapeadas.").replace("<", "&lt;").replace(">", "&gt;")
             res_estrategista = str(resultado_mesa.raw if resultado_mesa else "Veredito processado.").replace("<", "&lt;").replace(">", "&gt;")
@@ -174,27 +159,23 @@ if arquivo_upload:
             if match:
                 confluencias_count = match.group(1)
             else:
-                if sugestao != "NEUTRO":
-                    confluencias_count = "12/15"
-                else:
-                    confluencias_count = "3/15"
+                confluencias_count = "12/15" if sugestao != "NEUTRO" else "3/15"
 
-            # Validação do Horário de Brasília
+            # Validação inteligente do Horário de Brasília (Oculta se for NEUTRO)
             congestao_upper = sugestao.upper()
             if "NEUTRO" in congestao_upper:
                 linha_horario_html = ""
             else:
-                # Converte o fuso tirando as 3 horas de diferença da nuvem para bater com o Brasil
                 hora_brasilia = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%H:%M")
                 linha_horario_html = f"<div class='hud-linha'>Hora de Entrada: <span style='color: #00E676;'>{hora_brasilia}</span></div>"
             
             st.success("✅ Escaneamento HUD Analítico Concluído!")
             
-            # Definição de cores dinâmicas
+            # Configuração das cores do painel
             cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
             cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
             
-            # Construção limpa e perfeitamente indentada do HTML
+            # Montagem estruturada e limpa do HTML final na tela
             html_hud = "<div class='hud-container'>"
             html_hud += "  <div class='hud-header'>"
             html_hud += "    <span>📊 HUD M5 - Painel de Confluências Combinadas</span>"
@@ -202,7 +183,24 @@ if arquivo_upload:
             html_hud += "  </div>"
             html_hud += "  " + linha_horario_html
             html_hud += "  <div class='hud-linha'>Sugestão M5: <span style='color: " + cor_sinal + ";'>" + sugestao + "</span></div>"
-            html_hud += "  <div class='hud-linha'>Confluências Totais: <span style=" + "'color: #FFFFFF;'" + ">" + confluencias_count + "</span></div>"
+            html_hud += "  <div class='hud-linha'>Confluências Totais: <span style='color: #FFFFFF;'>" + confluencias_count + "</span></div>"
             html_hud += "  <div class='hud-linha'>Confiança: <span style='color: " + cor_conf + ";'>" + confianca + "</span></div>"
             html_hud += "  <div class='hud-secao-titulo'>Interpretação e Resumos dos Agentes</div>"
             html_hud += "  <div class='agente-bloco'>"
+            html_hud += "    <div class='agente-nome'>1) Agente Analista Técnico (Tendência Sequencial M5):</div>"
+            html_hud += "    <p class='agente-texto'>" + res_tendencia + "</p>"
+            html_hud += "  </div>"
+            html_hud += "  <div class='agente-bloco'>"
+            html_hud += "    <div class='agente-nome'>2) Agente Price Action (Suportes e Anatomia das Velas):</div>"
+            html_hud += "    <p class='agente-texto'>" + res_price_action + "</p>"
+            html_hud += "  </div>"
+            html_hud += "  <div class='agente-bloco'>"
+            html_hud += "    <div class='agente-nome'>3) Agente Estrategista (Veredito Combinado de Risco):</div>"
+            html_hud += "    <p class='agente-texto'>" + res_estrategista + "</p>"
+            html_hud += "  </div>"
+            html_hud += "</div>"
+            
+            # Desenha o HUD completo e formatado na tela
+            st.markdown(html_hud, unsafe_allow_html=True)
+            
+            st.markdown("---")
