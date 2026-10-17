@@ -4,7 +4,7 @@ from PIL import Image
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
 
-# Configuração 100% segura que lê a chave direto da memória oculta do Streamlit
+# Configuração para ler a nova chave da OpenAI direto dos Secrets do Streamlit
 if "OPENAI_API_KEY" not in os.environ:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
@@ -24,29 +24,32 @@ if arquivo_upload:
     if st.button("🚀 Iniciar Escaneamento e Análise dos Agentes"):
         with st.spinner("O GPT-4o está escaneando a tela... Aguarde."):
             
-            # Modelo multimodal GPT-4o
+            # Mudando para o motor da OpenAI (GPT-4o) para ler o print do gráfico
             llm_openai = ChatOpenAI(model="gpt-4o", temperature=0.1)
 
-            # Criando os 3 Agentes Especialistas
+            # Criando os 3 Agentes Especialistas com a OpenAI (LINHAS CORRIGIDAS)
             analista_tecnico = Agent(
                 role='Analista Técnico Quantitativo',
                 goal='Mapear rigorosamente a tendência macro/micro e canais de preço no print.',
                 backstory='Especialista em visão computacional voltada a estruturas de gráficos financeiros.',
-                verbose=True, llm=llm_openai
+                verbose=True, 
+                llm=llm_openai
             )
 
             especialista_price_action = Agent(
                 role='Especialista em Price Action',
                 goal='Escanear o print para achar zonas de suporte, resistência e padrões de velas.',
                 backstory='Analista detalhista que foca em equilíbrio de forças e confluências visuais.',
-                verbose=True, llm=llm_openai
+                verbose=True, 
+                llm=llm_openai
             )
 
             estrategista_ob = Agent(
                 role='Estrategista de Opções Binárias',
                 goal='Tomar a decisão final baseada no gerenciamento e confluência estrita.',
                 backstory='Matemático focado em manter o filtro rígido para buscar assertividade acima de 75%.',
-                verbose=True, llm=llm_openai
+                verbose=True, 
+                llm=llm_openai
             )
 
             # Definição das Tarefas de Visão
@@ -54,7 +57,7 @@ if arquivo_upload:
             t2 = Task(description="Escaneie o arquivo 'print_grafico.png'. Ache suportes, resistências e padrões de vela.", expected_output="Zonas de preço mapeadas.", agent=especialista_price_action)
             t3 = Task(description="Reúna as análises. Decida por CALL, PUT ou NEUTRO com a porcentagem de confiança.", expected_output="Resultado definitivo.", agent=estrategista_ob)
 
-            mesa = Crew(agents=[analista_tecnico, especialista_price_action, strategist_ob], tasks=[t1, t2, t3], process=Process.sequential)
+            mesa = Crew(agents=[analista_tecnico, especialista_price_action, estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
             resultado = str(mesa.kickoff())
             
             st.success("✅ Análise Computacional Concluída!")
@@ -68,7 +71,7 @@ if arquivo_upload:
             else:
                 sinal_final = "🟡 NEUTRO (FORA DO MERCADO)"
                 
-            # Criação dos 4 Quadrantes
+            # Criação dos 4 Quadrantes que você pediu
             q1, q2, q3, q4 = st.columns(4)
             with q1:
                 st.info("**Quadrante 1: Tendência**\n\nTendência do gráfico processada com sucesso via OpenAI.")
@@ -89,4 +92,3 @@ if arquivo_upload:
                 file_name="decisao_agentes_trading.txt",
                 mime="text/plain"
             )
-
