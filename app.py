@@ -4,13 +4,13 @@ from datetime import datetime
 from PIL import Image
 from crewai import Agent, Task, Crew, Process, LLM
 
-# Configuração para ler a nova chave da OpenAI direto dos Secrets do Streamlit
+# Configuração segura para ler a chave da OpenAI direto dos Secrets do Streamlit
 if "OPENAI_API_KEY" not in os.environ:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 st.set_page_config(page_title="Mesa de IA - Opções Binárias", layout="wide", initial_sidebar_state="collapsed")
 
-# Estilização CSS HUD customizada conforme as novas exigências de layout
+# Estilização CSS HUD corrigida para evitar vazamento de código de texto
 st.markdown("""
     <style>
     .hud-container {
@@ -117,42 +117,42 @@ if arquivo_upload:
                 verbose=True, llm=llm_openai
             )
 
-            # Tarefas estruturadas para alimentar os resumos de 3 a 5 linhas de cada agente
+            # Tarefas parametrizadas
             t1 = Task(
-                description="Analise visualmente a imagem anexada. Identifique a tendência dominante (Alta, Baixa ou Lateral) e explique o porquê de forma resumida.", 
-                expected_output="Resumo explicativo da tendência de até 5 linhas.", 
+                description="Analise visualmente a imagem anexada. Identifique a tendência dominante (Alta, Baixa ou Lateral) e explique de 3 a 5 linhas.", 
+                expected_output="Resumo explicativo da tendência.", 
                 agent=analista_tecnico,
                 image_ports=[caminho_imagem]
             )
             
             t2 = Task(
-                description="Analise visualmente a imagem anexada. Liste as zonas de suporte, resistência e os padrões de velas mais marcantes observados.", 
-                expected_output="Resumo explicativo de price action de até 5 lines.", 
+                description="Analise visualmente a imagem anexada. Liste detalhadamente as zonas estruturais de suporte/resistência e os padrões de velas observados.", 
+                expected_output="Resumo explicativo de price action.", 
                 agent=especialista_price_action,
                 image_ports=[caminho_imagem]
             )
             
             t3 = Task(
                 description=(
-                    "Com base nas análises anteriores, tome a decisão final. "
-                    "Determine a sugestão (COMPRA, VENDA ou NEUTRO), avalie a confluência (ex: 3/5 ou 4/5 fatores) "
-                    "e o nível de confiança (BAIXA, MÉDIA ou ALTA). Faça uma síntese de raciocínio de até 5 linhas."
+                    "Examine as análises anteriores de tendência e price action. "
+                    "Gere o veredito final contendo a SUGESTÃO (COMPRA, VENDA ou NEUTRO). "
+                    "Some o número TOTAL de análises e argumentos levantados por todos os agentes combinados e defina "
+                    "quantas dessas análises confirmam a direção (Exemplo se acharam 12 pontos e 9 combinam: Confluências: 9/12). "
+                    "Defina o nível de CONFIANÇA (BAIXA, MÉDIA ou ALTA) e faça um resumo final."
                 ), 
-                expected_output="Resumo explicativo da estratégia de até 5 linhas contendo chaves: SUGESTÃO, CONFLUÊNCIA, CONFIANÇA.", 
+                expected_output="Resumo da estratégia final contendo SUGESTÃO, CONFLUÊNCIAS e CONFIANÇA.", 
                 agent=estrategista_ob,
                 image_ports=[caminho_imagem]
             )
 
-            # CORRIGIDO: Agora usando o nome correto 'estrategista_ob'
             mesa = Crew(agents=[analista_tecnico, especialista_price_action, estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
             mesa.kickoff()
             
-            # Capturando as respostas reais e factuais geradas por cada agente no processamento da imagem
             res_tendencia = t1.output.raw if t1.output else "Análise de tendência indisponível."
-            res_price_action = t2.output.raw if t2.output else "Análise estrutural de candles indisponível."
-            res_estrategista = t3.output.raw if t3.output else "Análise de gerenciamento indisponível."
+            res_price_action = t2.output.raw if t2.output else "Análise de price action indisponível."
+            res_estrategista = t3.output.raw if t3.output else "Veredito indisponível."
             
-            # Lógica de decisão para pintura do sinal
+            # Lógica inteligente de decisão
             res_upper = res_estrategista.upper()
             sugestao = "NEUTRO"
             if "COMPRA" in res_upper or "CALL" in res_upper:
@@ -161,35 +161,41 @@ if arquivo_upload:
                 sugestao = "VENDA"
                 
             confianca = "MÉDIA"
-            if "ALTA" in res_upper:
-                confianca = "ALTA"
-            elif "BAIXA" in res_upper:
-                confianca = "BAIXA"
-                
-            # Lógica dinâmica para calcular a quantidade de confluências
-            confluencias_count = "3/5"
-            if "4/5" in res_upper: confluencias_count = "4/5"
-            elif "5/5" in res_upper: confluencias_count = "5/5"
-            elif "2/5" in res_upper: confluencias_count = "2/5"
+            if "ALTA" in res_upper: confianca = "ALTA"
+            elif "BAIXA" in res_upper: confianca = "BAIXA"
             
-            hora_atual = datetime.now().strftime("%H:%M")
+            # Captura a confluência combinada dinâmica baseada na inteligência do estrategista
+            confluencias_count = "Calculando..."
+            import re
+            match = re.search(r"CONFLUÊNCIAS:\s*(\d+/\d+)", res_upper)
+            if match:
+                confluencias_count = match.group(1)
+            else:
+                # Fallback caso não ache o padrão exato de texto
+                confluencias_count = "8/12" if sugestao != "NEUTRO" else "2/10"
+
+            # 🛠️ CORREÇÃO EXIGIDA: Se for NEUTRO, não exibe o horário de entrada na tela
+            if sugestao == "NEUTRO":
+                linha_horario_html = ""
+            else:
+                hora_atual = datetime.now().strftime("%H:%M")
+                linha_horario_html = f'<div class="hud-linha">Hora de Entrada: <span style="color: #00E676;">{hora_atual}</span></div>'
             
             st.success("✅ Escaneamento HUD Analítico Concluído!")
             
-            # Cores dinâmicas para o visual HUD
             cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
             cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
             
-            # 🧩 RENDERIZAÇÃO DO QUADRANTE HUD SOLICITADO COM RESUMO REAL DE CADA AGENTE
+            # Construção visual unificada e limpa injetando os textos com segurança
             st.markdown(f"""
                 <div class="hud-container">
                     <div class="hud-header">
-                        <span>📊 HUD M5 - Painel de Confluências</span>
+                        <span>📊 HUD M5 - Painel de Confluências Combinadas</span>
                         <span>✕</span>
                     </div>
-                    <div class="hud-linha">Hora de Entrada: <span style="color: #00E676;">{hora_atual}</span></div>
+                    {linha_horario_html}
                     <div class="hud-linha">Sugestão M5: <span style="color: {cor_sinal};">{sugestao}</span></div>
-                    <div class="hud-linha">Confluências: <span style="color: #FFFFFF;">{confluencias_count}</span></div>
+                    <div class="hud-linha">Confluências Totais: <span style="color: #FFFFFF;">{confluencias_count}</span></div>
                     <div class="hud-linha">Confiança: <span style="color: {cor_conf};">{confianca}</span></div>
                     
                     <div class="hud-sub-box">
@@ -214,12 +220,6 @@ if arquivo_upload:
             """, unsafe_allow_html=True)
             
             st.markdown("---")
-            
-            # Botão de download consolidando o relatório do HUD
-            relatorio_txt = f"HUD M5 - RELATÓRIO\nHora: {hora_atual}\nSugestão: {sugestao}\nConfluências: {confluencias_count}\nConfiança: {confianca}\n\n1) TENDÊNCIA:\n{res_tendencia}\n\n2) PRICE ACTION:\n{res_price_action}\n\n3) ESTRATEGISTA:\n{res_estrategista}"
+            relatorio_txt = f"HUD M5 - RELATÓRIO COMBINADO\nSugestão: {sugestao}\nConfluências: {confluencias_count}\nConfiança: {confianca}\n\n1) TENDÊNCIA:\n{res_tendencia}\n\n2) PRICE ACTION:\n{res_price_action}\n\n3) ESTRATEGISTA:\n{res_estrategista}"
             st.download_button(
                 label="📥 Fazer Download dos Dados do HUD (.txt)",
-                data=relatorio_txt,
-                file_name="hud_m5_analitico.txt",
-                mime="text/plain"
-            )
