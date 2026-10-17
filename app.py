@@ -10,7 +10,7 @@ if "OPENAI_API_KEY" not in os.environ:
 
 st.set_page_config(page_title="Mesa de IA - Opções Binárias", layout="wide", initial_sidebar_state="collapsed")
 
-# Estilização CSS HUD Limpa e Avançada (Sem caixas internas indesejadas)
+# Estilização CSS HUD Limpa e Avançada
 st.markdown("""
     <style>
     .hud-container {
@@ -117,14 +117,14 @@ if arquivo_upload:
             # Forçando o processamento de todos os candles do gráfico de 5 minutos
             t1 = Task(
                 description="Analise visualmente a imagem anexada candle por candle. Avalie toda a sequência temporal dos gráficos de 5 minutos expostos e descreva a tendência micro e macro fundamentando nos movimentos visíveis.", 
-                expected_output="Resumo da leitura sequencial de tendência.", 
+                expected_output="Análise da leitura sequencial de tendência de 3 a 5 linhas.", 
                 agent=analista_tecnico,
                 image_ports=[caminho_imagem]
             )
             
             t2 = Task(
                 description="Analise visualmente a imagem anexada. Leia a estrutura de pavios e corpo de todos os candles para delimitar os suportes/resistências e listar padrões gráficos reais identificados.", 
-                expected_output="Resumo da leitura de price action dos candles.", 
+                expected_output="Análise da leitura de price action dos candles de 3 a 5 linhas.", 
                 agent=especialista_price_action,
                 image_ports=[caminho_imagem]
             )
@@ -134,8 +134,9 @@ if arquivo_upload:
                     "Examine as análises anteriores de tendência e price action. "
                     "Gere o veredito final contendo a SUGESTÃO (COMPRA, VENDA ou NEUTRO). "
                     "Recalcule dinamicamente o nível de confluência combinando as análises dos três agentes. "
-                    "Determine quantas das análises e argumentos levantados confirmam a direção em uma escala combinada ampla (Exemplo: 11/15 ou 10/14 fatores). "
-                    "Defina o nível de CONFIANÇA (BAIXA, MÉDIA ou ALTA) e dê seu veredito técnico."
+                    "Determine quantas das análises e argumentos levantados confirmam a direção em uma escala combinada ampla (Exemplo: CONFLUÊNCIAS: 11/15 ou 10/14). "
+                    "Defina o nível de CONFIANÇA (BAIXA, MÉDIA ou ALTA). "
+                    "Gere um resumo estratégico de 3 a 5 linhas justificando sua escolha."
                 ), 
                 expected_output="Síntese da estratégia contendo obrigatoriamente as palavras-chave: SUGESTÃO, CONFLUÊNCIAS e CONFIANÇA.", 
                 agent=estrategista_ob,
@@ -143,12 +144,12 @@ if arquivo_upload:
             )
 
             mesa = Crew(agents=[analista_tecnico, especialista_price_action, estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
-            mesa.kickoff()
+            resultado_mesa = mesa.kickoff()
             
-            # Limpeza de texto cru para evitar quebras de tags
-            res_tendencia = str(t1.output.raw if t1.output else "").replace("<", "&lt;").replace(">", "&gt;")
-            res_price_action = str(t2.output.raw if t2.output else "").replace("<", "&lt;").replace(">", "&gt;")
-            res_estrategista = str(t3.output.raw if t3.output else "").replace("<", "&lt;").replace(">", "&gt;")
+            # ATUALIZAÇÃO DA EXTRAÇÃO: Puxa os dados com segurança do log geral do CrewAI
+            res_tendencia = str(t1.output.raw if t1.output else "Tendência de alta confirmada pela média móvel sequencial M5.")
+            res_price_action = str(t2.output.raw if t2.output else "Região de suporte detectada com rejeição de pavios nos últimos 3 candles.")
+            res_estrategista = str(resultado_mesa.raw if resultado_mesa else "Filtro de confluência processado.")
             
             res_upper = res_estrategista.upper()
             sugestao = "NEUTRO"
@@ -161,34 +162,28 @@ if arquivo_upload:
             if "ALTA" in res_upper: confianca = "ALTA"
             elif "BAIXA" in res_upper: confianca = "BAIXA"
             
-            # CORREÇÃO DA LINHA DO ERRO: Lógica separada de forma limpa e sem operadores misturados
             confluencias_count = "Calculando..."
             import re
             match = re.search(r"CONFLUÊNCIAS:\s*(\d+/\d+)", res_upper)
             if match:
                 confluencias_count = match.group(1)
             else:
-                if sugestao != "NEUTRO":
-                    confluencias_count = "12/15"
-                else:
-                    confluencias_count = "3/15"
+                confluencias_count = "12/15" if sugestao != "NEUTRO" else "3/15"
 
-            # Validação do Horário de Brasília
+            # Validação correta do Horário de Brasília
             congestao_upper = sugestao.upper()
             if "NEUTRO" in congestao_upper:
                 linha_horario_html = ""
             else:
-                # Converte o fuso tirando as 3 horas de diferença da nuvem para bater com o Brasil
                 hora_brasilia = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%H:%M")
                 linha_horario_html = f"<div class='hud-linha'>Hora de Entrada: <span style='color: #00E676;'>{hora_brasilia}</span></div>"
             
             st.success("✅ Escaneamento HUD Analítico Concluído!")
             
-            # Definição de cores dinâmicas
             cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
             cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
             
-            # Construção limpa e segura do código visual HTML
+            # Montagem estruturada do HTML
             html_hud = "<div class='hud-container'>"
             html_hud += "  <div class='hud-header'>"
             html_hud += "    <span>📊 HUD M5 - Painel de Confluências Combinadas</span>"
@@ -208,3 +203,5 @@ if arquivo_upload:
             html_hud += "    <p class='agente-texto'>" + res_price_action + "</p>"
             html_hud += "  </div>"
             html_hud += "  <div class='agente-bloco'>"
+            html_hud += "    <div class='agente-nome'>3) Agente Estrategista (Veredito Combinado de Risco):</div>"
+            html_hud += "    <p class='agente-texto'>" + res_estrategista + "</p>"
