@@ -1,8 +1,7 @@
 import streamlit as st
 import os
 from PIL import Image
-from crewai import Agent, Task, Crew, Process
-from langchain_openai import ChatOpenAI
+from crewai import Agent, Task, Crew, Process, LLM
 
 # Configuração para ler a nova chave da OpenAI direto dos Secrets do Streamlit
 if "OPENAI_API_KEY" not in os.environ:
@@ -24,10 +23,14 @@ if arquivo_upload:
     if st.button("🚀 Iniciar Escaneamento e Análise dos Agentes"):
         with st.spinner("O GPT-4o está escaneando a tela... Aguarde."):
             
-            # Mudando para o motor da OpenAI (GPT-4o) para ler o print do gráfico
-            llm_openai = ChatOpenAI(model="gpt-4o", temperature=0.1)
+            # FORMATO ATUALIZADO: Configuração do modelo aceita pela nova versão do CrewAI
+            llm_openai = LLM(
+                model="openai/gpt-4o", 
+                temperature=0.1,
+                api_key=os.environ["OPENAI_API_KEY"]
+            )
 
-            # Criando os 3 Agentes Especialistas com a OpenAI (LINHAS CORRIGIDAS)
+            # Criando os 3 Agentes Especialistas com a OpenAI
             analista_tecnico = Agent(
                 role='Analista Técnico Quantitativo',
                 goal='Mapear rigorosamente a tendência macro/micro e canais de preço no print.',
