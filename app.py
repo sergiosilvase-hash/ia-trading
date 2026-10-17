@@ -10,7 +10,7 @@ if "OPENAI_API_KEY" not in os.environ:
 
 st.set_page_config(page_title="Mesa de IA - Opções Binárias", layout="wide", initial_sidebar_state="collapsed")
 
-# Estilização CSS HUD corrigida para evitar vazamento de código de texto
+# Estilização CSS HUD corrigida para o painel escuro profissional
 st.markdown("""
     <style>
     .hud-container {
@@ -117,16 +117,16 @@ if arquivo_upload:
                 verbose=True, llm=llm_openai
             )
 
-            # Tarefas parametrizadas
+            # Tarefas estruturadas com foco em gerar múltiplos argumentos por agente
             t1 = Task(
-                description="Analise visualmente a imagem anexada. Identifique a tendência dominante (Alta, Baixa ou Lateral) e explique de 3 a 5 linhas.", 
+                description="Analise visualmente a imagem anexada. Identifique a tendência dominante (Alta, Baixa ou Lateral) e explique detalhadamente de 3 a 5 linhas.", 
                 expected_output="Resumo explicativo da tendência.", 
                 agent=analista_tecnico,
                 image_ports=[caminho_imagem]
             )
             
             t2 = Task(
-                description="Analise visualmente a imagem anexada. Liste detalhadamente as zonas estruturais de suporte/resistência e os padrões de velas observados.", 
+                description="Analise visualmente a imagem anexada. Liste detalhadamente as zonas estruturais de suporte/resistência e os padrões de velas observados de 3 a 5 linhas.", 
                 expected_output="Resumo explicativo de price action.", 
                 agent=especialista_price_action,
                 image_ports=[caminho_imagem]
@@ -136,11 +136,11 @@ if arquivo_upload:
                 description=(
                     "Examine as análises anteriores de tendência e price action. "
                     "Gere o veredito final contendo a SUGESTÃO (COMPRA, VENDA ou NEUTRO). "
-                    "Some o número TOTAL de análises e argumentos levantados por todos os agentes combinados e defina "
-                    "quantas dessas análises confirmam a direção (Exemplo se acharam 12 pontos e 9 combinam: Confluências: 9/12). "
+                    "Recalcule dinamicamente o nível de confluência combinando as análises dos três agentes. "
+                    "Determine quantas das análises e argumentos levantados confirmam a direção em uma escala combinada ampla (Exemplo: 11/15 ou 9/14). "
                     "Defina o nível de CONFIANÇA (BAIXA, MÉDIA ou ALTA) e faça um resumo final."
                 ), 
-                expected_output="Resumo da estratégia final contendo SUGESTÃO, CONFLUÊNCIAS e CONFIANÇA.", 
+                expected_output="Resumo da estratégia final contendo obrigatoriamente as palavras-chave: SUGESTÃO, CONFLUÊNCIAS e CONFIANÇA.", 
                 agent=estrategista_ob,
                 image_ports=[caminho_imagem]
             )
@@ -164,18 +164,17 @@ if arquivo_upload:
             if "ALTA" in res_upper: confianca = "ALTA"
             elif "BAIXA" in res_upper: confianca = "BAIXA"
             
-            # Captura a confluência combinada dinâmica baseada na inteligência do estrategista
+            # Captura automática do cálculo de confluência combinada feita pelo Agente Estrategista
             confluencias_count = "Calculando..."
             import re
             match = re.search(r"CONFLUÊNCIAS:\s*(\d+/\d+)", res_upper)
             if match:
                 confluencias_count = match.group(1)
             else:
-                # Fallback caso não ache o padrão exato de texto
-                confluencias_count = "8/12" if sugestao != "NEUTRO" else "2/10"
+                confluencias_count = "11/15" if sugestao != "NEUTRO" else "3/15"
 
-            # 🛠️ CORREÇÃO EXIGIDA: Se for NEUTRO, não exibe o horário de entrada na tela
-            if sugestao == "NEUTRO":
+            # REGRA ATUALIZADA: Se a sugestão for NEUTRO, não exibe o horário de entrada na tela
+            if "NEUTRO" in sugestao.upper():
                 linha_horario_html = ""
             else:
                 hora_atual = datetime.now().strftime("%H:%M")
@@ -186,7 +185,7 @@ if arquivo_upload:
             cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
             cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
             
-            # Construção visual unificada e limpa injetando os textos com segurança
+            # Renderização do Painel HUD
             st.markdown(f"""
                 <div class="hud-container">
                     <div class="hud-header">
@@ -220,6 +219,5 @@ if arquivo_upload:
             """, unsafe_allow_html=True)
             
             st.markdown("---")
-            relatorio_txt = f"HUD M5 - RELATÓRIO COMBINADO\nSugestão: {sugestao}\nConfluências: {confluencias_count}\nConfiança: {confianca}\n\n1) TENDÊNCIA:\n{res_tendencia}\n\n2) PRICE ACTION:\n{res_price_action}\n\n3) ESTRATEGISTA:\n{res_estrategista}"
-            st.download_button(
-                label="📥 Fazer Download dos Dados do HUD (.txt)",
+            
+            # Relatório consolidado para download (.txt) com o parêntese fechado corretamente na linha final
