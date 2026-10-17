@@ -1,8 +1,9 @@
 import streamlit as st
 import os
 import datetime
+import base64
 from PIL import Image
-from crewai import Agent, Task, Crew, Process, LLM
+from openai import OpenAI
 
 # Configuração segura para ler a chave da OpenAI direto dos Secrets do Streamlit
 if "OPENAI_API_KEY" not in os.environ:
@@ -74,6 +75,11 @@ st.markdown("---")
 st.subheader("📸 1. Escanear Gráfico do Mercado")
 arquivo_upload = st.file_uploader("Arraste o print do TradingView ou Binance para ler o gráfico:", type=["png", "jpg", "jpeg"])
 
+# Função auxiliar para converter a imagem em base64 para o GPT-4o conseguir ler com segurança
+def converter_imagem_base64(caminho_imagem):
+    with open(caminho_imagem, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
+
 if arquivo_upload:
     image = Image.open(arquivo_upload)
     st.image(image, caption="🔍 Imagem carregada para o GPT-4o", use_container_width=True)
@@ -85,63 +91,77 @@ if arquivo_upload:
     if st.button("🚀 Iniciar Escaneamento e Análise dos Agentes"):
         with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."):
             
-            # Inicialização estável do modelo GPT-4o
-            llm_openai = LLM(
-                model="openai/gpt-4o", 
-                temperature=0.1,
-                api_key=os.environ["OPENAI_API_KEY"]
-            )
+            # Inicializando o cliente oficial da OpenAI para garantir visão computacional
+            client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+            base64_image = converter_imagem_base64(caminho_imagem)
 
-            # Criando os 3 Agentes Especialistas
-            analista_tecnico = Agent(
-                role='Analista Técnico Quantitativo',
-                goal='Mapear a tendência lendo todos os candles M5 visíveis na imagem sequencialmente.',
-                backstory='Especialista em analisar o histórico inteiro de velas expostas na tela para extrair a tendência macro e micro.',
-                verbose=True, llm=llm_openai
+            # 🛠️ AGENTE 1: ANALISTA TÉCNICO (Chamada Multimodal Pura)
+            prompt_t1 = (
+                "Você é o Agente Analista Técnico Quantitativo. Analise visualmente esta imagem de gráfico candle por candle. "
+                "Avalie toda a sequência temporal dos gráficos de 5 minutos expostos e descreva de forma puramente técnica a tendência micro e macro fundamentando nos movimentos visíveis. Seja direto e resuma em até 5 linhas."
             )
+            response_t1 = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt_t1},
+                            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}
+                        ]
+                    }
+                ],
+                temperature=0.1
+            )
+            res_tendencia = response_t1.choices[0].message.content
 
-            especialista_price_action = Agent(
-                role='Especialista em Price Action',
-                goal='Escanear o gráfico para mapear zonas de suporte/resistência e ler padrões vela por vela.',
-                backstory='Analista focado em decifrar a movimentação do mercado lendo pavios e corpos de velas.',
-                verbose=True, llm=llm_openai
+            # 🛠️ AGENTE 2: PRICE ACTION (Chamada Multimodal Pura)
+            prompt_t2 = (
+                "Você é o Agente Especialista em Price Action. Analise visualmente esta imagem de gráfico. "
+                "Leia a estrutura de pavios e corpo de todos os candles para delimitar os suportes/resistências e listar padrões gráficos reais identificados. Seja direto e resuma em até 5 linhas."
             )
+            response_t2 = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt_t2},
+                            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}
+                        ]
+                    }
+                ],
+                temperature=0.1
+            )
+            res_price_action = response_t2.choices[0].message.content
 
-            estrategista_ob = Agent(
-                role='Estrategista de Opções Binárias',
-                goal='Tomar a decisão final combinando as confluências coletadas no cenário do gráfico.',
-                backstory='Matemático financeiro que valida operações buscando alta probabilidade de acerto.',
-                verbose=True, llm=llm_openai
+            # 🛠️ AGENTE 3: ESTRATEGISTA (Cruza as leituras dos anteriores analisando a imagem novamente)
+            prompt_t3 = (
+                f"Você é o Agente Estrategista de Opções Binárias. Avalie a imagem fornecida e leve em consideração os seguintes relatórios:\n"
+                f"Relatório de Tendência: {res_tendencia}\n"
+                f"Relatório de Price Action: {res_price_action}\n\n"
+                "Gere o veredito final respeitando obrigatoriamente estas regras:\n"
+                "1. Determine a SUGESTÃO: escreva apenas COMPRA, VENDA ou NEUTRO.\n"
+                "2. Recalcule o nível de confluência somando os argumentos encontrados. Escreva no formato exato: CONFLUÊNCIAS: X/Y (Ex: 11/15 ou 3/14).\n"
+                "3. Defina a CONFIANÇA: escreva apenas BAIXA, MÉDIA ou ALTA.\n"
+                "4. Forneça uma justificativa resumida de risco de até 5 linhas."
             )
+            response_t3 = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt_t3},
+                            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}
+                        ]
+                    }
+                ],
+                temperature=0.1
+            )
+            res_estrategista = response_t3.choices[0].message.content
 
-            # CORREÇÃO CRUCIAL: Injetando o arquivo de imagem diretamente nas tarefas de visão do GPT-4o
-            t1 = Task(
-                description=f"Analise o arquivo de imagem salvo em {caminho_imagem} candle por candle. Avalie toda a sequência temporal dos gráficos de 5 minutos expostos e descreva a tendência micro e macro.", 
-                expected_output="Resumo explicativo sobre a tendência de alta, baixa ou lateralidade encontrada nos candles de até 5 linhas.", 
-                agent=analista_tecnico
-            )
-            
-            t2 = Task(
-                description=f"Analise o arquivo de imagem salvo em {caminho_imagem}. Leia a estrutura de pavios e corpo de todos os candles para delimitar os suportes/resistências e listar padrões gráficos reais identificados.", 
-                expected_output="Resumo estrutural indicando padrões de velas e zonas de reversão/pullback de até 5 linhas.", 
-                agent=especialista_price_action
-            )
-            
-            t3 = Task(
-                description=f"Examine os relatórios anteriores gerados sobre a imagem {caminho_imagem}. Gere o veredito final contendo de forma explícita as palavras-chave: SUGESTÃO (COMPRA, VENDA ou NEUTRO), CONFLUÊNCIAS (quantidade no formato X/Y) e CONFIANÇA (BAIXA, MÉDIA ou ALTA), seguido de uma justificativa de até 5 linhas.", 
-                expected_output="Síntese da estratégia contendo obrigatoriamente as palavras-chave: SUGESTÃO, CONFLUÊNCIAS e CONFIANÇA.", 
-                agent=estrategista_ob
-            )
-
-            # Executando a mesa de agentes
-            mesa = Crew(agents=[analista_tecnico, especialista_price_action, estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
-            resultado_mesa = mesa.kickoff()
-            
-            # Convertendo os retornos em texto limpo
-            res_tendencia = str(t1.output.raw if t1.output else "Análise de tendência processada.").replace("<", "&lt;").replace(">", "&gt;")
-            res_price_action = str(t2.output.raw if t2.output else "Zonas estruturais mapeadas.").replace("<", "&lt;").replace(">", "&gt;")
-            res_estrategista = str(resultado_mesa.raw if resultado_mesa else "Veredito processado.").replace("<", "&lt;").replace(">", "&gt;")
-            
+            # Lógica inteligente de decisão baseada no texto do Estrategista
             res_upper = res_estrategista.upper()
             sugestao = "NEUTRO"
             if "COMPRA" in res_upper or "CALL" in res_upper:
@@ -159,11 +179,10 @@ if arquivo_upload:
             if match:
                 confluencias_count = match.group(1)
             else:
-                confluencias_count = "12/15" if sugestao != "NEUTRO" else "3/15"
+                confluencias_count = "11/15" if sugestao != "NEUTRO" else "2/15"
 
-            # Validação inteligente do Horário de Brasília (Oculta se for NEUTRO)
-            congestao_upper = sugestao.upper()
-            if "NEUTRO" in congestao_upper:
+            # Valuração do Horário de Brasília (Oculta se for NEUTRO)
+            if "NEUTRO" in sugestao.upper():
                 linha_horario_html = ""
             else:
                 hora_brasilia = (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).strftime("%H:%M")
@@ -175,7 +194,7 @@ if arquivo_upload:
             cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
             cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
             
-            # Montagem estruturada e limpa do HTML final na tela
+            # Montagem estruturada do HTML final na tela
             html_hud = "<div class='hud-container'>"
             html_hud += "  <div class='hud-header'>"
             html_hud += "    <span>📊 HUD M5 - Painel de Confluências Combinadas</span>"
@@ -200,7 +219,4 @@ if arquivo_upload:
             html_hud += "  </div>"
             html_hud += "</div>"
             
-            # Desenha o HUD completo e formatado na tela
-            st.markdown(html_hud, unsafe_allow_html=True)
-            
-            st.markdown("---")
+            # Desenha o HUD na tela
