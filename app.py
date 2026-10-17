@@ -188,7 +188,7 @@ if arquivo_upload:
                 cor_sinal = "#00E676" if sugestao == "COMPRA" else ("#FF5252" if sugestao == "VENDA" else "#FFD600")
                 cor_conf = "#00E676" if confianca == "ALTA" else ("#FFA726" if confianca == "MÉDIA" else "#FF5252")
                 
-                # Construção limpa e segura do código visual HTML (Agora dentro do escopo correto do try)
+                # Construção limpa e perfeitamente indentada do HTML (CORREÇÃO DA SINTAXE)
                 html_hud = "<div class='hud-container'>"
                 html_hud += "  <div class='hud-header'>"
                 html_hud += "    <span>📊 HUD M5 - Painel de Confluências Combinadas</span>"
