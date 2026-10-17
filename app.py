@@ -4,8 +4,9 @@ from PIL import Image
 from crewai import Agent, Task, Crew, Process
 from langchain_openai import ChatOpenAI
 
-# Sua chave da OpenAI injetada diretamente de forma fixa para evitar erros nos Secrets
-os.environ["OPENAI_API_KEY"] = "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"
+# Configuração 100% segura que lê a chave direto da memória oculta do Streamlit
+if "OPENAI_API_KEY" not in os.environ:
+    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 st.set_page_config(page_title="Mesa de IA - Opções Binárias", layout="wide", initial_sidebar_state="collapsed")
 st.title("🤖 Painel OpenAI: Visão & Análise M5")
@@ -23,10 +24,10 @@ if arquivo_upload:
     if st.button("🚀 Iniciar Escaneamento e Análise dos Agentes"):
         with st.spinner("O GPT-4o está escaneando a tela... Aguarde."):
             
-            # Inicializando o motor GPT-4o da OpenAI com suporte a imagens
+            # Modelo multimodal GPT-4o
             llm_openai = ChatOpenAI(model="gpt-4o", temperature=0.1)
 
-            # Criando os 3 Agentes Especialistas com a OpenAI
+            # Criando os 3 Agentes Especialistas
             analista_tecnico = Agent(
                 role='Analista Técnico Quantitativo',
                 goal='Mapear rigorosamente a tendência macro/micro e canais de preço no print.',
@@ -53,7 +54,7 @@ if arquivo_upload:
             t2 = Task(description="Escaneie o arquivo 'print_grafico.png'. Ache suportes, resistências e padrões de vela.", expected_output="Zonas de preço mapeadas.", agent=especialista_price_action)
             t3 = Task(description="Reúna as análises. Decida por CALL, PUT ou NEUTRO com a porcentagem de confiança.", expected_output="Resultado definitivo.", agent=estrategista_ob)
 
-            mesa = Crew(agents=[analista_tecnico, especialista_price_action, estrategista_ob], tasks=[t1, t2, t3], process=Process.sequential)
+            mesa = Crew(agents=[analista_tecnico, especialista_price_action, strategist_ob], tasks=[t1, t2, t3], process=Process.sequential)
             resultado = str(mesa.kickoff())
             
             st.success("✅ Análise Computacional Concluída!")
@@ -67,7 +68,7 @@ if arquivo_upload:
             else:
                 sinal_final = "🟡 NEUTRO (FORA DO MERCADO)"
                 
-            # Criação dos 4 Quadrantes solicitados na tela do Streamlit
+            # Criação dos 4 Quadrantes
             q1, q2, q3, q4 = st.columns(4)
             with q1:
                 st.info("**Quadrante 1: Tendência**\n\nTendência do gráfico processada com sucesso via OpenAI.")
@@ -88,3 +89,4 @@ if arquivo_upload:
                 file_name="decisao_agentes_trading.txt",
                 mime="text/plain"
             )
+
