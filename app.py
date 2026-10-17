@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import datetime
+import base64
 from PIL import Image
 import re
 from openai import OpenAI
@@ -106,16 +107,16 @@ if arquivo_upload:
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t1}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
                     temperature=0.1
                 )
-                res_tendencia = response_t1.choices[0].message.content
+                res_tendencia = response_t1.choices.message.content
 
                 # Chamada Agente 2 (Price Action)
-                prompt_t2 = "Você é o Agente Especialista em Price Action. Enumere e liste de 3 a 5 linhas as zonas de suporte, resistência e padrões anatômicos de rejeição nos pavios."
+                prompt_t2 = "Você é o Agente Especialista em Price Action. Enumere e liste de 3 a 5 linhas as zonas de suporte, resistência e padrões anatômicos de prevenção ou rejeição nos pavios."
                 response_t2 = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t2}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
                     temperature=0.1
                 )
-                res_price_action = response_t2.choices[0].message.content
+                res_price_action = response_t2.choices.message.content
 
                 # Chamada Agente 3 (Estrategista)
                 prompt_t3 = (
@@ -133,7 +134,7 @@ if arquivo_upload:
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t3}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
                     temperature=0.1
                 )
-                res_estrategista = response_t3.choices[0].message.content
+                res_estrategista = response_t3.choices.message.content
 
                 # Processamento das respostas
                 res_upper = res_estrategista.upper()
@@ -189,7 +190,7 @@ if arquivo_upload:
                         st.metric(label="Próxima Entrada", value="AGUARDANDO GATILHO")
 
                 st.markdown("---")
-                st.markdown("#### 🧠 Interpretação e Resumos dos Agentes")
+                st.markdown("#### 🧠/ Interpretação e Resumos dos Agentes")
                 
                 with st.expander("1) Agente Analista Técnico (Tendência Sequencial M5)", expanded=True):
                     st.write(res_tendencia)
