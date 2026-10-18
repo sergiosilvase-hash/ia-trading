@@ -216,4 +216,4 @@ if arquivo_upload:
                 st.markdown("---")
                 st.markdown("#### 🧠 Interpretação e Resumos dos Agentes")
                 
-                # CORREÇÃO DA INDENTAÇÃO: Margens perfeitamente alinhadas com 4 espaços obrigatórios
+                with st.expander("1) Agente Analista Técnico (Tendência Sequencial M5)", expanded=True):
