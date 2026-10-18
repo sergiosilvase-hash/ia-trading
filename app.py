@@ -1,7 +1,6 @@
 import streamlit as st
 import os
 import datetime
-import base64
 from PIL import Image
 import re
 from openai import OpenAI
@@ -126,11 +125,11 @@ if arquivo_upload:
                 )
                 res_price_action = response_t2.choices[0].message.content
 
-                # Chamada Agente 3 (Estrategista) - Enquadramento Simulativo Organizado
+                # Chamada Agente 3 (Estrategista) - Enquadramento Simulativo Organizado (CORRIGIDO)
                 prompt_t3 = (
                     "Para fins de estudo estatístico e simulação teórica baseada em dados gráficos, avalie o seguinte cenário.\n"
-                    "Considere o Relatório de Tendência: " + str(res_tendencia) + "\n"
-                    "Considere o Relatório de Price Action: " + str(res_price_action) + "\n\n"
+                    f"Considere a Tendência: {res_tendencia}\n"
+                    f"Considere o Price Action: {res_price_action}\n\n"
                     "Gere uma síntese puramente probabilística e acadêmica contendo exatamente as chaves textuais:\n"
                     "SUGESTÃO: [Indique COMPRA, VENDA ou NEUTRO com base estritamente na direção simulada do movimento técnico]\n"
                     "CONFLUÊNCIAS: [Número total de fatores teóricos que convergem para apoiar o estudo]\n"
@@ -210,3 +209,4 @@ if arquivo_upload:
                 relatorio_txt = f"HUD M5 - RELATÓRIO\nSugestão: {sugestao}\nConfluências: {confluencias_count}\nConfiança: {confianca_pct}\n\n1) TENDÊNCIA:\n{res_tendencia}\n\n2) PRICE ACTION:\n{res_price_action}\n\n3) ESTRATEGISTA:\n{res_estrategista}"
                 st.download_button(
                     label="📥 Fazer Download dos Dados do HUD (.txt)",
+                    data=relatorio_txt,
