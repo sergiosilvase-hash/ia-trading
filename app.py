@@ -93,7 +93,6 @@ if arquivo_upload:
     st.image(image, caption="🔍 Arquivo de imagem carregada!", use_container_width=True)
     bytes_finais = arquivo_upload.getvalue()
 else:
-    # Se o botão de Ctrl+V foi selecionado, ativa a leitura do paste button nativo
     from streamlit_paste_button import paste_image_button
     imagem_colada_real = paste_image_button(
         label="Área de Transferência Ativa: Pressione Ctrl+V agora",
@@ -136,7 +135,6 @@ with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."
         messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t1}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
         temperature=0.1
     )
-    # CORRIGIDO ÍNDICE [0]
     res_tendencia = response_t1.choices[0].message.content
 
     # Chamada Agente 2 (Price Action)
@@ -150,7 +148,6 @@ with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."
         messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t2}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
         temperature=0.1
     )
-    # CORRIGIDO ÍNDICE [0]
     res_price_action = response_t2.choices[0].message.content
 
     # Chamada Agente 3 (Estrategista)
@@ -188,7 +185,6 @@ with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."
         messages=messages_t3,
         temperature=0.1
     )
-    # CORRIGIDO ÍNDICE [0]
     res_estrategista = response_t3.choices[0].message.content
 
     # Processamento das respostas
@@ -246,3 +242,6 @@ with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."
         st.write(res_price_action)
         
     with st.expander("3) Agente Estrategista (Veredito Combinado de Risco)", expanded=True):
+        st.write(res_estrategista)
+
+    st.markdown("---")
