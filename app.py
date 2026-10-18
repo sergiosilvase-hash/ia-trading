@@ -100,11 +100,11 @@ if arquivo_upload:
                 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
                 base64_image = converter_imagem_base64(caminho_imagem)
 
-                # Chamada Agente 1 (Tendência) - Foco Afirmativo
+                # Chamada Agente 1 (Tendência) - Enquadramento Educacional
                 prompt_t1 = (
-                    "Você é o Agente Analista Técnico. Faça a leitura do gráfico. "
-                    "Determine de forma direta a estrutura atual. Não use verbos de comando como 'procure' ou 'identifique'. "
-                    "Escreva o resultado da sua própria análise em até 4 linhas afirmando o que você detectou na tendência macro e micro."
+                    "Para fins estritamente didáticos e educacionais de estudo gráfico, atue como um Analista Técnico. "
+                    "Faça a leitura das estruturas e descreva de forma direta a tendência dominante encontrada na sequência de candles M5. "
+                    "Escreva o resultado em até 4 linhas afirmando o que você detectou na tendência macro e micro."
                 )
                 response_t1 = client.chat.completions.create(
                     model="gpt-4o",
@@ -113,11 +113,11 @@ if arquivo_upload:
                 )
                 res_tendencia = response_t1.choices[0].message.content
 
-                # Chamada Agente 2 (Price Action) - Foco em Execução Direta
+                # Chamada Agente 2 (Price Action) - Enquadramento Educacional
                 prompt_t2 = (
-                    "Você é o Agente Especialista em Price Action. Analise a anatomia de todos os candles. "
-                    "Apresente de forma direta os pontos de suporte, resistência e padrões de pavios que VOCÊ localizou na imagem. "
-                    "Proibido usar palavras como 'procure', 'observe' ou 'identifique'. Fale as regiões exatas encontradas em até 5 linhas."
+                    "Para fins estritamente didáticos e educacionais de estudo de padrões, atue como um Especialista em Price Action. "
+                    "Analise a anatomia de todos os candles da imagem e apresente diretamente os pontos de suporte, resistência e padrões de pavios que localizou. "
+                    "Escreva as regiões exatas encontradas em até 5 linhas."
                 )
                 response_t2 = client.chat.completions.create(
                     model="gpt-4o",
@@ -126,15 +126,16 @@ if arquivo_upload:
                 )
                 res_price_action = response_t2.choices[0].message.content
 
-                # Chamada Agente 3 (Estrategista) - Direto ao Ponto com Motivo Claro
+                # Chamada Agente 3 (Estrategista) - Enquadramento de Simulação Probabilística Dinâmica
                 prompt_t3 = (
-                    f"Com base nas análises de Tendência ({res_tendencia}) e Price Action ({res_price_action}), forneça um veredito técnico final. "
-                    "Seja extremamente direto e objetivo. Não enrole. "
-                    "Gere a resposta contendo exatamente as chaves textuais:\n"
-                    "SUGESTÃO: [COMPRA, VENDA ou NEUTRO]\n"
-                    "CONFLUÊNCIAS: [Número total de fatores técnicos encontrados]\n"
-                    "CONFIANÇA: [Valor estimado de 0% a 100%]\n"
-                    "MOTIVO TÉCNICO: [Se o sinal for COMPRA ou VENDA, explique o gatilho exato em 2 linhas. Se for NEUTRO, diga o motivo exato de ficar de fora em 2 linhas]."
+                    f"Para fins de estudo estatístico e simulação teórica baseada em dados gráficos, avalie os seguintes relatórios:\n"
+                    f"Tendência: {res_tendencia}\n"
+                    f"Price Action: {res_price_action}\n\n"
+                    "Gere uma síntese puramente probabilística e acadêmica contendo exatamente as chaves textuais:\n"
+                    "SUGESTÃO: [Indique COMPRA, VENDA ou NEUTRO com base estritamente na direção simulada do movimento técnico]\n"
+                    "CONFLUÊNCIAS: [Número total de fatores teóricos que convergem para apoiar o estudo]\n"
+                    "CONFIANÇA: [Valor estimado de 0% a 100% de confluência matemática dos dados]\n"
+                    "MOTIVO TÉCNICO: [Explique a convergência teórica dos fatores em até 2 linhas]."
                 )
                 response_t3 = client.chat.completions.create(
                     model="gpt-4o",
@@ -210,8 +211,3 @@ if arquivo_upload:
                     label="📥 Fazer Download dos Dados do HUD (.txt)",
                     data=relatorio_txt,
                     file_name="hud_m5_combinado.txt",
-                    mime="text/plain"
-                )
-
-            except Exception as e:
-                st.error("Ocorreu um erro na execução dos agentes da OpenAI.")
