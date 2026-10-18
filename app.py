@@ -5,7 +5,7 @@ import base64
 import re
 from PIL import Image
 from openai import OpenAI
-from io import BytesIO
+from streamlit_paste_button import paste_image_button  # Biblioteca nativa de colagem
 
 # Configuração segura para ler a chave da OpenAI direto dos Secrets do Streamlit
 if "OPENAI_API_KEY" not in os.environ:
@@ -17,34 +17,54 @@ st.title("🤖 Painel OpenAI: Visão & Análise M5")
 st.markdown("---")
 
 st.subheader("📸 1. Escanear Gráfico do Mercado")
-arquivo_upload = st.file_uploader("Arraste o print do TradingView ou Binance para ler o gráfico:", type=["png", "jpg", "jpeg"])
+st.markdown("Você pode carregar o gráfico de duas formas: arrastando o arquivo ou clicando no botão abaixo para **Colar com Ctrl+V**.")
 
-# Função atualizada para codificar a imagem direto da memória virtual (sem salvar arquivo físico)
-def converter_upload_base64(uploaded_file):
-    bytes_data = uploaded_file.getvalue()
+# 🛠️ GATILHO COMPATIVEL COM CTRL+V: Botão especial que lê a área de transferência do seu teclado
+imagem_colada = paste_image_button(
+    label="📋 Clique aqui e aperte Ctrl+V para colar o print do Gráfico",
+    background_color="#1E1E1E",
+    hover_background_color="#00E676",
+    errors="ignore"
+)
+
+arquivo_upload = st.file_uploader("Ou se preferir, arraste o arquivo do print aqui:", type=["png", "jpg", "jpeg"])
+
+def converter_bytes_base64(bytes_data):
     return base64.b64encode(bytes_data).decode('utf-8')
 
-if not arquivo_upload:
-    st.info("Aguardando o upload de um print gráfico para iniciar os agentes.")
-    st.stop()
+# Lógica inteligente para capturar a imagem seja por Upload ou por Colagem direta de Ctrl+V
+bytes_finais = None
 
-# Se o arquivo foi carregado, processa direto na memória
-image = Image.open(arquivo_upload)
-st.image(image, caption="🔍 Imagem carregada para o GPT-4o", use_container_width=True)
+if imagem_colada and imagem_colada.image_data is not None:
+    image = imagem_colada.image_data
+    st.image(image, caption="🔍 Imagem colada via Ctrl+V com sucesso!", use_container_width=True)
+    # Converte a imagem colada para bytes
+    from io import BytesIO
+    buf = BytesIO()
+    image.save(buf, format="PNG")
+    bytes_finais = buf.getvalue()
+
+elif arquivo_upload:
+    image = Image.open(arquivo_upload)
+    st.image(image, caption="🔍 Arquivo de imagem carregado!", use_container_width=True)
+    bytes_finais = arquivo_upload.getvalue()
+
+if bytes_finais is None:
+    st.info("Aguardando o gráfico (Arraste o arquivo ou use o botão de Ctrl+V acima).")
+    st.stop()
 
 st.markdown("---")
 if not st.button("🚀 Iniciar Escaneamento e Análise dos Agentes"):
     st.stop()
 
-# Execução principal dos agentes após o clique do botão
+# Execução principal dos agentes
 with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."):
     if not os.environ.get("OPENAI_API_KEY"):
         st.error("❌ ERRO: A chave 'OPENAI_API_KEY' não foi encontrada nos Secrets.")
         st.stop()
     
-    # Inicializando cliente OpenAI e convertendo imagem em memória
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    base64_image = converter_upload_base64(arquivo_upload)
+    base64_image = base64.b64encode(bytes_finais).decode('utf-8')
 
     # Chamada Agente 1 (Tendência)
     prompt_t1 = (
