@@ -5,6 +5,7 @@ import base64
 import re
 from PIL import Image
 from openai import OpenAI
+from io import BytesIO
 
 # Configuração segura para ler a chave da OpenAI direto dos Secrets do Streamlit
 if "OPENAI_API_KEY" not in os.environ:
@@ -18,20 +19,18 @@ st.markdown("---")
 st.subheader("📸 1. Escanear Gráfico do Mercado")
 arquivo_upload = st.file_uploader("Arraste o print do TradingView ou Binance para ler o gráfico:", type=["png", "jpg", "jpeg"])
 
-def converter_imagem_base64(caminho_imagem):
-    with open(caminho_imagem, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
+# Função atualizada para codificar a imagem direto da memória virtual (sem salvar arquivo físico)
+def converter_upload_base64(uploaded_file):
+    bytes_data = uploaded_file.getvalue()
+    return base64.b64encode(bytes_data).decode('utf-8')
 
 if not arquivo_upload:
     st.info("Aguardando o upload de um print gráfico para iniciar os agentes.")
     st.stop()
 
-# Se o arquivo foi carregado, processa a imagem
+# Se o arquivo foi carregado, processa direto na memória
 image = Image.open(arquivo_upload)
 st.image(image, caption="🔍 Imagem carregada para o GPT-4o", use_container_width=True)
-
-caminho_imagem = "print_grafico.png"
-image.save(caminho_imagem)
 
 st.markdown("---")
 if not st.button("🚀 Iniciar Escaneamento e Análise dos Agentes"):
@@ -43,9 +42,9 @@ with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."
         st.error("❌ ERRO: A chave 'OPENAI_API_KEY' não foi encontrada nos Secrets.")
         st.stop()
     
-    # Inicializando cliente OpenAI
+    # Inicializando cliente OpenAI e convertendo imagem em memória
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    base64_image = converter_imagem_base64(caminho_imagem)
+    base64_image = converter_upload_base64(arquivo_upload)
 
     # Chamada Agente 1 (Tendência)
     prompt_t1 = (
@@ -122,7 +121,7 @@ with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."
         proxima_vela_time = agora.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(minutes=minutos_proxima_vela)
         hora_entrada = proxima_vela_time.strftime("%H:%M")
 
-    # 📊 RENDERIZAÇÃO DA INTERFACE NATIVA - ALINHAMENTO BLINDADO NAS MARGENS
+    # 📊 RENDERIZAÇÃO DA INTERFACE NATIVA
     st.success("✅ Escaneamento Completo!")
     st.markdown("### 📊 HUD M5 - Painel de Confluências Combinadas")
     
