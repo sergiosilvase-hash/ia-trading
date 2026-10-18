@@ -2,8 +2,8 @@ import streamlit as st
 import os
 import datetime
 import base64
-import re
 from PIL import Image
+import re
 from openai import OpenAI
 
 # Configuração segura para ler a chave da OpenAI direto dos Secrets do Streamlit
@@ -126,11 +126,11 @@ if arquivo_upload:
                 )
                 res_price_action = response_t2.choices[0].message.content
 
-                # Chamada Agente 3 (Estrategista) - Enquadramento de Simulação Probabilística Dinâmica
+                # Chamada Agente 3 (Estrategista) - Enquadramento Simulativo Organizado
                 prompt_t3 = (
-                    f"Para fins de estudo estatístico e simulação teórica baseada em dados gráficos, avalie os seguintes relatórios:\n"
-                    f"Tendência: {res_tendencia}\n"
-                    f"Price Action: {res_price_action}\n\n"
+                    "Para fins de estudo estatístico e simulação teórica baseada em dados gráficos, avalie o seguinte cenário.\n"
+                    "Considere o Relatório de Tendência: " + str(res_tendencia) + "\n"
+                    "Considere o Relatório de Price Action: " + str(res_price_action) + "\n\n"
                     "Gere uma síntese puramente probabilística e acadêmica contendo exatamente as chaves textuais:\n"
                     "SUGESTÃO: [Indique COMPRA, VENDA ou NEUTRO com base estritamente na direção simulada do movimento técnico]\n"
                     "CONFLUÊNCIAS: [Número total de fatores teóricos que convergem para apoiar o estudo]\n"
@@ -177,6 +177,7 @@ if arquivo_upload:
                     hora_entrada = proxima_vela_time.strftime("%H:%M")
                     linha_horario_html = f"<div class='hud-linha'>Hora da Próxima Entrada (M5 Target): <span style='color: #00E676;'>{hora_entrada}</span></div>"
 
+                # 📊 RENDERIZAÇÃO DA INTERFACE NATIVA
                 st.success("✅ Escaneamento Completo!")
                 st.markdown("### 📊 HUD M5 - Painel de Confluências Combinadas")
                 
@@ -209,5 +210,3 @@ if arquivo_upload:
                 relatorio_txt = f"HUD M5 - RELATÓRIO\nSugestão: {sugestao}\nConfluências: {confluencias_count}\nConfiança: {confianca_pct}\n\n1) TENDÊNCIA:\n{res_tendencia}\n\n2) PRICE ACTION:\n{res_price_action}\n\n3) ESTRATEGISTA:\n{res_estrategista}"
                 st.download_button(
                     label="📥 Fazer Download dos Dados do HUD (.txt)",
-                    data=relatorio_txt,
-                    file_name="hud_m5_combinado.txt",
