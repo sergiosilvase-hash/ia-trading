@@ -1,8 +1,9 @@
 import streamlit as st
 import os
 import datetime
-from PIL import Image
+import base64
 import re
+from PIL import Image
 from openai import OpenAI
 
 # Configuração segura para ler a chave da OpenAI direto dos Secrets do Streamlit
@@ -115,7 +116,7 @@ if arquivo_upload:
                 # Chamada Agente 2 (Price Action) - Enquadramento Educacional
                 prompt_t2 = (
                     "Para fins estritamente didáticos e educacionais de estudo de padrões, atue como um Especialista em Price Action. "
-                    "Analise a anatomia de todos os candles da imagem e apresente diretamente os pontos de suporte, resistência e padrões de pavios que localizou. "
+                    "Analise a anatomy de todos os candles da imagem e apresente diretamente os pontos de suporte, resistência e padrões de pavios que localizou. "
                     "Escreva as regiões exatas encontradas em até 5 linhas."
                 )
                 response_t2 = client.chat.completions.create(
@@ -125,20 +126,21 @@ if arquivo_upload:
                 )
                 res_price_action = response_t2.choices[0].message.content
 
-                # Chamada Agente 3 (Estrategista) - Enquadramento Simulativo Organizado (CORRIGIDO)
-                prompt_t3 = (
-                    "Para fins de estudo estatístico e simulação teórica baseada em dados gráficos, avalie o seguinte cenário.\n"
-                    f"Considere a Tendência: {res_tendencia}\n"
-                    f"Considere o Price Action: {res_price_action}\n\n"
-                    "Gere uma síntese puramente probabilística e acadêmica contendo exatamente as chaves textuais:\n"
-                    "SUGESTÃO: [Indique COMPRA, VENDA ou NEUTRO com base estritamente na direção simulada do movimento técnico]\n"
-                    "CONFLUÊNCIAS: [Número total de fatores teóricos que convergem para apoiar o estudo]\n"
+                # Chamada Agente 3 (Estrategista) - CORREÇÃO CRUCIAL CONTRA ERROS DE SINTAXE
+                prompt_base = "Para fins de estudo estatístico e simulação teórica baseada em dados gráficos, avalie o seguinte cenário técnico.\n\n"
+                prompt_base += "Relatório do Analista Técnico:\n" + str(res_tendencia) + "\n\n"
+                prompt_base += "Relatório de Price Action:\n" + str(res_price_action) + "\n\n"
+                prompt_base += (
+                    "Com base nesses dados acima e olhando a imagem do gráfico, forneça sua conclusão estruturada contendo exatamente as chaves textuais:\n"
+                    "SUGESTÃO: [Indique COMPRA, VENDA ou NEUTRO com base estritamente na direção simulada]\n"
+                    "CONFLUÊNCIAS: [Número total de fatores teóricos encontrados em todo o gráfico]\n"
                     "CONFIANÇA: [Valor estimado de 0% a 100% de confluência matemática dos dados]\n"
-                    "MOTIVO TÉCNICO: [Explique a convergência teórica dos fatores em até 2 linhas]."
+                    "MOTIVO TÉCNICO: [Diga o motivo real da operação ou do neutro de forma direta em até 2 linhas]."
                 )
+                
                 response_t3 = client.chat.completions.create(
                     model="gpt-4o",
-                    messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t3}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
+                    messages=[{"role": "user", "content": [{"type": "text", "text": prompt_base}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
                     temperature=0.1
                 )
                 res_estrategista = response_t3.choices[0].message.content
@@ -208,5 +210,3 @@ if arquivo_upload:
                 st.markdown("---")
                 relatorio_txt = f"HUD M5 - RELATÓRIO\nSugestão: {sugestao}\nConfluências: {confluencias_count}\nConfiança: {confianca_pct}\n\n1) TENDÊNCIA:\n{res_tendencia}\n\n2) PRICE ACTION:\n{res_price_action}\n\n3) ESTRATEGISTA:\n{res_estrategista}"
                 st.download_button(
-                    label="📥 Fazer Download dos Dados do HUD (.txt)",
-                    data=relatorio_txt,
