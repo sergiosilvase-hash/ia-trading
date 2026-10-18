@@ -90,7 +90,7 @@ bytes_finais = None
 # Captura inteligente da imagem
 if arquivo_upload:
     image = Image.open(arquivo_upload)
-    st.image(image, caption="🔍 Arquivo de imagem carregado!", use_container_width=True)
+    st.image(image, caption="🔍 Arquivo de imagem carregada!", use_container_width=True)
     bytes_finais = arquivo_upload.getvalue()
 else:
     # Se o botão de Ctrl+V foi selecionado, ativa a leitura do paste button nativo
@@ -136,7 +136,8 @@ with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."
         messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t1}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
         temperature=0.1
     )
-    res_tendencia = response_t1.choices.message.content
+    # CORRIGIDO ÍNDICE [0]
+    res_tendencia = response_t1.choices[0].message.content
 
     # Chamada Agente 2 (Price Action)
     prompt_t2 = (
@@ -149,9 +150,10 @@ with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."
         messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t2}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
         temperature=0.1
     )
-    res_price_action = response_t2.choices.message.content
+    # CORRIGIDO ÍNDICE [0]
+    res_price_action = response_t2.choices[0].message.content
 
-    # Chamada Agente 3 (Estrategista) - ALINHAMENTO DAS MARGENS TOTALMENTE CORRIGIDO
+    # Chamada Agente 3 (Estrategista)
     messages_t3 = [
         {
             "role": "system",
@@ -170,7 +172,7 @@ with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."
             "content": (
                 "Com base nesses parâmetros puramente simulados e avaliando a distribuição visual dos blocos na imagem anexa, gere uma síntese combinada contendo exatamente as chaves textuais de forma limpa:\n"
                 "SUGESTÃO: [Escreva COMPRA, VENDA ou NEUTRO com base estritamente na direção teórica calculada pelo simulador matemático]\n"
-                "CONFLUÊNCIAS: [Número total de fatores abstratos convergentes identificados no estudo de simulação]\n"
+                "CONFLUÊNCIAS: [Número total de fatores teóricos que convergem para apoiar o estudo]\n"
                 "CONFIANÇA: [Valor estimado de 0% a 100% correspondente ao peso matemático dos dados computados]\n"
                 "MOTIVO TÉCNICO: [Explique a convergência teórica dos fatores simulados em até 2 linhas de forma abstrata]."
             )
@@ -186,7 +188,8 @@ with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."
         messages=messages_t3,
         temperature=0.1
     )
-    res_estrategista = response_t3.choices.message.content
+    # CORRIGIDO ÍNDICE [0]
+    res_estrategista = response_t3.choices[0].message.content
 
     # Processamento das respostas
     res_upper = res_estrategista.upper()
@@ -243,5 +246,3 @@ with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."
         st.write(res_price_action)
         
     with st.expander("3) Agente Estrategista (Veredito Combinado de Risco)", expanded=True):
-        st.write(res_estrategista)
-
