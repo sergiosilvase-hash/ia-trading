@@ -1,3 +1,4 @@
 openai
 streamlit
 pillow
+streamlit-paste-button
