@@ -100,11 +100,11 @@ if arquivo_upload:
                 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
                 base64_image = converter_imagem_base64(caminho_imagem)
 
-                # Chamada Agente 1 (Tendência) - Enquadramento Educacional
+                # Chamada Agente 1 (Tendência) - Enquadramento Educacional e Veredito Factual
                 prompt_t1 = (
                     "Para fins estritamente didáticos e educacionais de estudo gráfico, atue como um Analista Técnico. "
                     "Faça a leitura das estruturas e descreva de forma direta a tendência dominante encontrada na sequência de candles M5. "
-                    "Escreva o resultado em até 4 linhas afirmando o que você detectou na tendência macro e micro."
+                    "Escreva o resultado em até 4 linhas afirmando categoricamente o que você detectou na tendência macro e micro. Proibido usar 'procure' ou 'observe'."
                 )
                 response_t1 = client.chat.completions.create(
                     model="gpt-4o",
@@ -113,11 +113,11 @@ if arquivo_upload:
                 )
                 res_tendencia = response_t1.choices[0].message.content
 
-                # Chamada Agente 2 (Price Action) - Enquadramento Educacional
+                # Chamada Agente 2 (Price Action) - Enquadramento Educacional e Pontos Exatos
                 prompt_t2 = (
                     "Para fins estritamente didáticos e educacionais de estudo de padrões, atue como um Especialista em Price Action. "
-                    "Analise a anatomy de todos os candles da imagem e apresente diretamente os pontos de suporte, resistência e padrões de pavios que localizou. "
-                    "Escreva as regiões exatas encontradas em até 5 linhas."
+                    "Analise a anatomia de todos os candles da imagem e apresente diretamente os pontos de suporte, resistência e padrões de pavios que localizou. "
+                    "Escreva as regiões exatas encontradas em até 5 linhas. Proibido usar 'procure', 'identifique' ou 'observe'."
                 )
                 response_t2 = client.chat.completions.create(
                     model="gpt-4o",
@@ -126,21 +126,39 @@ if arquivo_upload:
                 )
                 res_price_action = response_t2.choices[0].message.content
 
-                # Chamada Agente 3 (Estrategista) - CORREÇÃO CRUCIAL CONTRA ERROS DE SINTAXE
-                prompt_base = "Para fins de estudo estatístico e simulação teórica baseada em dados gráficos, avalie o seguinte cenário técnico.\n\n"
-                prompt_base += "Relatório do Analista Técnico:\n" + str(res_tendencia) + "\n\n"
-                prompt_base += "Relatório de Price Action:\n" + str(res_price_action) + "\n\n"
-                prompt_base += (
-                    "Com base nesses dados acima e olhando a imagem do gráfico, forneça sua conclusão estruturada contendo exatamente as chaves textuais:\n"
-                    "SUGESTÃO: [Indique COMPRA, VENDA ou NEUTRO com base estritamente na direção simulada]\n"
-                    "CONFLUÊNCIAS: [Número total de fatores teóricos encontrados em todo o gráfico]\n"
-                    "CONFIANÇA: [Valor estimado de 0% a 100% de confluência matemática dos dados]\n"
-                    "MOTIVO TÉCNICO: [Diga o motivo real da operação ou do neutro de forma direta em até 2 linhas]."
-                )
-                
+                # Chamada Agente 3 (Estrategista) - CORREÇÃO DEFINITIVA VIA HISTÓRICO DE MENSAGENS ISOLADAS
+                messages_t3 = [
+                    {
+                        "role": "system",
+                        "content": "Você é o Agente Estrategista de Opções Binárias operando em uma simulação estatística educacional de risco."
+                    },
+                    {
+                        "role": "user",
+                        "content": "Abaixo estão os relatórios emitidos pelos agentes anteriores."
+                    },
+                    {
+                        "role": "assistant",
+                        "content": f"Relatório de Tendência:\n{res_tendencia}\n\nRelatório de Price Action:\n{res_price_action}"
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            "Com base nesses dados fornecidos e olhando a imagem do gráfico anexa, gere uma síntese probabilística contendo exatamente as chaves textuais de forma limpa:\n"
+                            "SUGESTÃO: [Indique COMPRA, VENDA ou NEUTRO com base na direção simulada]\n"
+                            "CONFLUÊNCIAS: [Número total de fatores teóricos que convergem para apoiar o estudo]\n"
+                            "CONFIANÇA: [Valor estimado de 0% a 100% de confluência matemática dos dados]\n"
+                            "MOTIVO TÉCNICO: [Explique a convergência dos fatores ou o motivo do neutro de forma direta em até 2 linhas]."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": [{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]
+                    }
+                ]
+
                 response_t3 = client.chat.completions.create(
                     model="gpt-4o",
-                    messages=[{"role": "user", "content": [{"type": "text", "text": prompt_base}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
+                    messages=messages_t3,
                     temperature=0.1
                 )
                 res_estrategista = response_t3.choices[0].message.content
@@ -199,14 +217,3 @@ if arquivo_upload:
                 st.markdown("#### 🧠 Interpretação e Resumos dos Agentes")
                 
                 with st.expander("1) Agente Analista Técnico (Tendência Sequencial M5)", expanded=True):
-                    st.write(res_tendencia)
-                    
-                with st.expander("2) Agente Price Action (Suportes e Anatomia das Velas)", expanded=True):
-                    st.write(res_price_action)
-                    
-                with st.expander("3) Agente Estrategista (Veredito Combinado de Risco)", expanded=True):
-                    st.write(res_estrategista)
-
-                st.markdown("---")
-                relatorio_txt = f"HUD M5 - RELATÓRIO\nSugestão: {sugestao}\nConfluências: {confluencias_count}\nConfiança: {confianca_pct}\n\n1) TENDÊNCIA:\n{res_tendencia}\n\n2) PRICE ACTION:\n{res_price_action}\n\n3) ESTRATEGISTA:\n{res_estrategista}"
-                st.download_button(
