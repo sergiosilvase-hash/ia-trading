@@ -12,64 +12,6 @@ if "OPENAI_API_KEY" not in os.environ:
 
 st.set_page_config(page_title="Mesa de IA - Opções Binárias", layout="wide", initial_sidebar_state="collapsed")
 
-# Estilização CSS HUD Limpa e Avançada
-st.markdown("""
-    <style>
-    .hud-container {
-        background-color: #121212;
-        padding: 30px;
-        border-radius: 12px;
-        border: 1px solid #1E1E1E;
-        color: #FFFFFF;
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        max-width: 650px;
-        margin: 0 auto;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
-    }
-    .hud-header {
-        font-size: 18px;
-        font-weight: bold;
-        color: #00E676;
-        border-bottom: 2px solid #1E1E1E;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-        display: flex;
-        justify-content: space-between;
-    }
-    .hud-linha {
-        font-size: 15px;
-        margin-bottom: 12px;
-        font-weight: bold;
-    }
-    .hud-secao-titulo {
-        font-size: 14px;
-        font-weight: bold;
-        color: #00E676;
-        margin-top: 25px;
-        margin-bottom: 15px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        border-bottom: 1px solid #1E1E1E;
-        padding-bottom: 5px;
-    }
-    .agente-bloco {
-        margin-bottom: 18px;
-    }
-    .agente-nome {
-        color: #00B0FF;
-        font-weight: bold;
-        font-size: 13px;
-        margin-bottom: 4px;
-    }
-    .agente-texto {
-        color: #E0E0E0;
-        font-size: 13px;
-        line-height: 1.5;
-        margin: 0;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 st.title("🤖 Painel OpenAI: Visão & Análise M5")
 st.markdown("---")
 
@@ -80,140 +22,137 @@ def converter_imagem_base64(caminho_imagem):
     with open(caminho_imagem, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-if arquivo_upload:
-    image = Image.open(arquivo_upload)
-    st.image(image, caption="🔍 Imagem carregada para o GPT-4o", use_container_width=True)
+if not arquivo_upload:
+    st.info("Aguardando o upload de um print gráfico para iniciar os agentes.")
+    st.stop()
+
+# Se o arquivo foi carregado, processa a imagem
+image = Image.open(arquivo_upload)
+st.image(image, caption="🔍 Imagem carregada para o GPT-4o", use_container_width=True)
+
+caminho_imagem = "print_grafico.png"
+image.save(caminho_imagem)
+
+st.markdown("---")
+if not st.button("🚀 Iniciar Escaneamento e Análise dos Agentes"):
+    st.stop()
+
+# Execução principal dos agentes após o clique do botão
+with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."):
+    if not os.environ.get("OPENAI_API_KEY"):
+        st.error("❌ ERRO: A chave 'OPENAI_API_KEY' não foi encontrada nos Secrets.")
+        st.stop()
     
-    caminho_imagem = "print_grafico.png"
-    image.save(caminho_imagem)
+    # Inicializando cliente OpenAI
+    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    base64_image = converter_imagem_base64(caminho_imagem)
+
+    # Chamada Agente 1 (Tendência)
+    prompt_t1 = (
+        "Para fins estritamente didáticos e educacionais de estudo gráfico, atue como um Analista Técnico. "
+        "Faça a leitura das estruturas e descreva de forma direta a tendência dominante encontrada na sequência de candles M5. "
+        "Escreva o resultado em até 4 linhas afirmando categoricamente o que você detectou na tendência macro e micro. Proibido usar 'procure' ou 'observe'."
+    )
+    response_t1 = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t1}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
+        temperature=0.1
+    )
+    res_tendencia = response_t1.choices[0].message.content
+
+    # Chamada Agente 2 (Price Action)
+    prompt_t2 = (
+        "Para fins estritamente didáticos e educacionais de estudo de padrões, atue como um Especialista em Price Action. "
+        "Analise a anatomia de todos os candles da imagem e apresente diretamente os pontos de suporte, resistência e padrões de pavios que localizou. "
+        "Escreva as regiões exatas encontradas em até 5 linhas. Proibido usar 'procure', 'identifique' ou 'observe'."
+    )
+    response_t2 = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t2}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
+        temperature=0.1
+    )
+    res_price_action = response_t2.choices[0].message.content
+
+    # Chamada Agente 3 (Estrategista)
+    prompt_base = "Para fins de estudo estatístico e simulação teórica baseada em dados gráficos, avalie o seguinte cenário técnico.\n\n"
+    prompt_base += "Relatório do Analista Técnico:\n" + str(res_tendencia) + "\n\n"
+    prompt_base += "Relatório de Price Action:\n" + str(res_price_action) + "\n\n"
+    prompt_base += (
+        "Com base nesses dados fornecidos e olhando a imagem do gráfico anexa, gere uma síntese probabilística contendo exatamente as chaves textuais de forma limpa:\n"
+        "SUGESTÃO: [Indique COMPRA, VENDA ou NEUTRO com base na direção simulada]\n"
+        "CONFLUÊNCIAS: [Número total de fatores teóricos que convergem para apoiar o estudo]\n"
+        "CONFIANÇA: [Valor estimado de 0% a 100% de confluência matemática dos dados]\n"
+        "MOTIVO TÉCNICO: [Explique a convergência dos fatores ou o motivo do neutro de forma direta em até 2 linhas]."
+    )
+    response_t3 = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": [{"type": "text", "text": prompt_base}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
+        temperature=0.1
+    )
+    res_estrategista = response_t3.choices[0].message.content
+
+    # Processamento das respostas
+    res_upper = res_estrategista.upper()
+    sugestao = "NEUTRO"
+    if "COMPRA" in res_upper or "CALL" in res_upper: sugestao = "COMPRA"
+    elif "VENDA" in res_upper or "PUT" in res_upper: sugestao = "VENDA"
     
+    confluencias_count = "0"
+    match_conf = re.search(r"CONFLUÊNCIAS:\s*(\d+)", res_upper)
+    if match_conf:
+        confluencias_count = match_conf.group(1)
+    
+    if int(confluencias_count) < 3 and sugestao != "NEUTRO":
+        sugestao = "NEUTRO"
+
+    confianca_pct = "0%"
+    match_pct = re.search(r"CONFIANÇA:\s*(\d+%)", res_upper)
+    if match_pct:
+        confianca_pct = match_pct.group(1)
+    else:
+        match_num = re.search(r"CONFIANÇA:\s*(\d+)", res_upper)
+        if match_num: confianca_pct = f"{match_num.group(1)}%"
+
+    # Horário arredondado da próxima vela M5
+    hora_entrada = "AGUARDANDO GATILHO"
+    if "NEUTRO" not in sugestao.upper():
+        agora = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
+        minutos_atuais = agora.minute
+        minutos_proxima_vela = ((minutos_atuais // 5) + 1) * 5
+        proxima_vela_time = agora.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(minutes=minutos_proxima_vela)
+        hora_entrada = proxima_vela_time.strftime("%H:%M")
+
+    # 📊 RENDERIZAÇÃO DA INTERFACE NATIVA - ALINHAMENTO BLINDADO NAS MARGENS
+    st.success("✅ Escaneamento Completo!")
+    st.markdown("### 📊 HUD M5 - Painel de Confluências Combinadas")
+    
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric(label="Sugestão M5", value=sugestao)
+    with c2:
+        st.metric(label="Confluências Ativas (Min: 3)", value=confluencias_count)
+    with c3:
+        st.metric(label="Nível de Confiança", value=confianca_pct)
+    with c4:
+        st.metric(label="Próxima Entrada (Abertura)", value=hora_entrada)
+
     st.markdown("---")
-    if st.button("🚀 Iniciar Escaneamento e Análise dos Agentes"):
-        with st.spinner("O GPT-4o está varrendo a sequência de candles M5... Aguarde."):
-            
-            if not os.environ.get("OPENAI_API_KEY"):
-                st.error("❌ ERRO: A chave 'OPENAI_API_KEY' não foi encontrada nos Secrets.")
-                st.stop()
-            
-            try:
-                # Inicializando cliente OpenAI
-                client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-                base64_image = converter_imagem_base64(caminho_imagem)
+    st.markdown("#### 🧠 Interpretação e Resumos dos Agentes")
+    
+    with st.expander("1) Agente Analista Técnico (Tendência Sequencial M5)", expanded=True):
+        st.write(res_tendencia)
+        
+    with st.expander("2) Agente Price Action (Suportes e Anatomia das Velas)", expanded=True):
+        st.write(res_price_action)
+        
+    with st.expander("3) Agente Estrategista (Veredito Combinado de Risco)", expanded=True):
+        st.write(res_estrategista)
 
-                # Chamada Agente 1 (Tendência) - Enquadramento Educacional e Veredito Factual
-                prompt_t1 = (
-                    "Para fins estritamente didáticos e educacionais de estudo gráfico, atue como um Analista Técnico. "
-                    "Faça a leitura das estruturas e descreva de forma direta a tendência dominante encontrada na sequência de candles M5. "
-                    "Escreva o resultado em até 4 linhas afirmando categoricamente o que você detectou na tendência macro e micro. Proibido usar 'procure' ou 'observe'."
-                )
-                response_t1 = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t1}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
-                    temperature=0.1
-                )
-                res_tendencia = response_t1.choices[0].message.content
-
-                # Chamada Agente 2 (Price Action) - Enquadramento Educacional e Pontos Exatos
-                prompt_t2 = (
-                    "Para fins estritamente didáticos e educacionais de estudo de padrões, atue as an Especialista em Price Action. "
-                    "Analise a anatomia de todos os candles da imagem e apresente diretamente os pontos de suporte, resistência e padrões de pavios que localizou. "
-                    "Escreva as regiões exatas encontradas em até 5 linhas. Proibido usar 'procure', 'identifique' ou 'observe'."
-                )
-                response_t2 = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": [{"type": "text", "text": prompt_t2}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]}],
-                    temperature=0.1
-                )
-                res_price_action = response_t2.choices[0].message.content
-
-                # Chamada Agente 3 (Estrategista) - Histórico de mensagens isoladas para evitar erros de sintaxe
-                messages_t3 = [
-                    {
-                        "role": "system",
-                        "content": "Você é o Agente Estrategista de Opções Binárias operando em uma simulação estatística educacional de risco."
-                    },
-                    {
-                        "role": "user",
-                        "content": "Abaixo estão os relatórios emitidos pelos agentes anteriores."
-                    },
-                    {
-                        "role": "assistant",
-                        "content": f"Relatório de Tendência:\n{res_tendencia}\n\nRelatório de Price Action:\n{res_price_action}"
-                    },
-                    {
-                        "role": "user",
-                        "content": (
-                            "Com base nesses dados fornecidos e olhando a imagem do gráfico anexa, gere uma síntese probabilística contendo exatamente as chaves textuais de forma limpa:\n"
-                            "SUGESTÃO: [Indique COMPRA, VENDA ou NEUTRO com base na direção simulada]\n"
-                            "CONFLUÊNCIAS: [Número total de fatores teóricos que convergem para apoiar o estudo]\n"
-                            "CONFIANÇA: [Valor estimado de 0% a 100% de confluência matemática dos dados]\n"
-                            "MOTIVO TÉCNICO: [Explique a convergência dos fatores ou o motivo do neutro de forma direta em até 2 linhas]."
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": [{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}]
-                    }
-                ]
-
-                response_t3 = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=messages_t3,
-                    temperature=0.1
-                )
-                res_estrategista = response_t3.choices[0].message.content
-
-                # Processamento das respostas
-                res_upper = res_estrategista.upper()
-                sugestao = "NEUTRO"
-                if "COMPRA" in res_upper or "CALL" in res_upper: sugestao = "COMPRA"
-                elif "VENDA" in res_upper or "PUT" in res_upper: sugestao = "VENDA"
-                
-                confluencias_count = "0"
-                match_conf = re.search(r"CONFLUÊNCIAS:\s*(\d+)", res_upper)
-                if match_conf:
-                    confluencias_count = match_conf.group(1)
-                
-                if int(confluencias_count) < 3 and sugestao != "NEUTRO":
-                    sugestao = "NEUTRO"
-
-                confianca_pct = "0%"
-                match_pct = re.search(r"CONFIANÇA:\s*(\d+%)", res_upper)
-                if match_pct:
-                    confianca_pct = match_pct.group(1)
-                else:
-                    match_num = re.search(r"CONFIANÇA:\s*(\d+)", res_upper)
-                    if match_num: confianca_pct = f"{match_num.group(1)}%"
-
-                # Horário arredondado da próxima vela M5
-                if "NEUTRO" in sugestao.upper():
-                    linha_horario_html = ""
-                else:
-                    agora = datetime.datetime.utcnow() - datetime.timedelta(hours=3)
-                    minutos_atuais = agora.minute
-                    minutos_proxima_vela = ((minutos_atuais // 5) + 1) * 5
-                    proxima_vela_time = agora.replace(minute=0, second=0, microsecond=0) + datetime.timedelta(minutes=minutos_proxima_vela)
-                    hora_entrada = proxima_vela_time.strftime("%H:%M")
-                    linha_horario_html = f"<div class='hud-linha'>Hora da Próxima Entrada (M5 Target): <span style='color: #00E676;'>{hora_entrada}</span></div>"
-
-                # 📊 RENDERIZAÇÃO DA INTERFACE NATIVA
-                st.success("✅ Escaneamento Completo!")
-                st.markdown("### 📊 HUD M5 - Painel de Confluências Combinadas")
-                
-                c1, c2, c3, c4 = st.columns(4)
-                with c1:
-                    st.metric(label="Sugestão M5", value=sugestao)
-                with c2:
-                    st.metric(label="Confluências Ativas (Min: 3)", value=confluencias_count)
-                with c3:
-                    st.metric(label="Nível de Confiança", value=confianca_pct)
-                with c4:
-                    if "NEUTRO" not in sugestao.upper():
-                        st.metric(label="Próxima Entrada (Abertura)", value=hora_entrada)
-                    else:
-                        st.metric(label="Próxima Entrada", value="AGUARDANDO GATILHO")
-
-                st.markdown("---")
-                st.markdown("#### 🧠 Interpretação e Resumos dos Agentes")
-                
-                with st.expander("1) Agente Analista Técnico (Tendência Sequencial M5)", expanded=True):
+    st.markdown("---")
+    relatorio_txt = f"HUD M5 - RELATÓRIO\nSugestão: {sugestao}\nConfluências: {confluencias_count}\nConfiança: {confianca_pct}\n\n1) TENDÊNCIA:\n{res_tendencia}\n\n2) PRICE ACTION:\n{res_price_action}\n\n3) ESTRATEGISTA:\n{res_estrategista}"
+    st.download_button(
+        label="📥 Fazer Download dos Dados do HUD (.txt)",
+        data=relatorio_txt,
+        file_name="hud_m5_combinado.txt",
+        mime="text/plain"
+    )
