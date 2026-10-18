@@ -126,7 +126,7 @@ if arquivo_upload:
                 )
                 res_price_action = response_t2.choices[0].message.content
 
-                # Chamada Agente 3 (Estrategista) - CORREÇÃO DEFINITIVA VIA HISTÓRICO DE MENSAGENS ISOLADAS
+                # Chamada Agente 3 (Estrategista) - Histórico de mensagens isoladas para evitar erros de sintaxe
                 messages_t3 = [
                     {
                         "role": "system",
@@ -216,4 +216,4 @@ if arquivo_upload:
                 st.markdown("---")
                 st.markdown("#### 🧠 Interpretação e Resumos dos Agentes")
                 
-                with st.expander("1) Agente Analista Técnico (Tendência Sequencial M5)", expanded=True):
+                # CORREÇÃO DA INDENTAÇÃO: Margens perfeitamente alinhadas com 4 espaços obrigatórios
