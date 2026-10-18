@@ -115,7 +115,7 @@ if arquivo_upload:
 
                 # Chamada Agente 2 (Price Action) - Enquadramento Educacional e Pontos Exatos
                 prompt_t2 = (
-                    "Para fins estritamente didáticos e educacionais de estudo de padrões, atue como um Especialista em Price Action. "
+                    "Para fins estritamente didáticos e educacionais de estudo de padrões, atue as an Especialista em Price Action. "
                     "Analise a anatomia de todos os candles da imagem e apresente diretamente os pontos de suporte, resistência e padrões de pavios que localizou. "
                     "Escreva as regiões exatas encontradas em até 5 linhas. Proibido usar 'procure', 'identifique' ou 'observe'."
                 )
